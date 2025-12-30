@@ -1,0 +1,28 @@
+# --- OS Specific Files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Python Specific ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.env
+
+# --- Project/IDE Specific ---
+.vscode/
+.idea/
+*.log
+
+# --- files ---
+*.json
+*.jpeg
+*.xls
+*.xlsx
+*.parquet
+*.dat
+*.png
+*.csv
