@@ -32,10 +32,8 @@ write.table(
     row.names = FALSE,
     col.names = TRUE,
     quote = FALSE
-)```
-
-
----
+)
+```
 
 ## Methodology (Summary)
 
@@ -51,7 +49,7 @@ The party classification is open to interpretation, but national-wide parties ha
 
 ## Project structure
 
-vox_ine_project/
+```vox_ine_project/
 ├── README.md
 ├── pyproject.toml
 ├── .gitignore
@@ -71,8 +69,8 @@ vox_ine_project/
 │   ├── __init__.py
 │   └── test.py -TBD-
 └── requirements.txt
+```
 
----
 
 ## Notes
 
