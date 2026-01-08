@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os
 from loguru import logger
 from matplotlib import pyplot as plt
@@ -30,7 +31,7 @@ class GeneratePlots:
         self._clean_data()
         self._create_plot_data()
         self._evolution_plot()
-        self._heatmap_plot()
+        self._heatmap_plot(False, n_bins=4)
         logger.success("Project have been performed completely!")
 
     def _load_data(self):
@@ -104,42 +105,56 @@ class GeneratePlots:
             plt.tight_layout()
             plt.show()
 
-    def _heatmap_plot(self, show: bool = False):
+    def _heatmap_plot(self, show: bool = False, n_bins: int = 3):
         for var in DICT_HEATMAP.keys():
-            df_agg_heat_plot, v_min, v_max = create_agg_data_heatmap_plot(
-                self.df_heatmap, var
+            df_agg, v_min, v_max = create_agg_data_heatmap_plot(
+                self.df_heatmap, var, n_bins=n_bins
             )
-            _, ax = plt.subplots(figsize=(6, 6))
+
+            fig, ax = plt.subplots(figsize=(6, 6))
+
             im = ax.imshow(
-                df_agg_heat_plot.values,
+                df_agg.values,
                 origin="lower",
                 cmap=DICT_HEATMAP[var][0],
                 vmin=v_min,
                 vmax=v_max,
+                aspect="auto",
             )
 
-            # Add grid lines
-            ax.set_xticks([0, 1, 2])
-            ax.set_yticks([0, 1, 2])
-            ax.set_xticklabels(["Low", "Medium", "High"])
-            ax.set_yticklabels(["Low", "Medium", "High"])
-            ax.set_xlabel("Percentage of Immigrant Population")
-            ax.set_ylabel("Mean Household Income")
-            ax.set_title(f"{DICT_HEATMAP[var][1]} Share by District Quantiles")
+            # Axis ticks
+            ticks = np.arange(n_bins)
+            labels = [f"Q{i + 1}" for i in range(n_bins)]
 
-            # Add colorbar
+            ax.set_xticks(ticks)
+            ax.set_yticks(ticks)
+            ax.set_xticklabels(labels)
+            ax.set_yticklabels(labels)
+
+            ax.set_xlabel("Percentage of Immigrant Population (quantiles)")
+            ax.set_ylabel("Household Net Income (quantiles)")
+            ax.set_title(f"{DICT_HEATMAP[var][1]} by Income × Immigration")
+
+            # Colorbar
             cbar = plt.colorbar(im, ax=ax)
-            cbar.set_label(f"{DICT_HEATMAP[var][1]} Share (%)")
+            cbar.set_label(DICT_HEATMAP[var][1])
 
-            # Optional: annotate each square with value
-            for i in range(3):
-                for j in range(3):
-                    val = df_agg_heat_plot.iloc[i, j]
-                    ax.text(j, i, f"{val:.1f}", ha="center", va="center", color="black")
+            # Annotate only for small grids
+            if n_bins <= 5:
+                for i in range(df_agg.shape[0]):
+                    for j in range(df_agg.shape[1]):
+                        val = df_agg.iloc[i, j]
+                        if not np.isnan(val):
+                            ax.text(
+                                j, i, f"{val:.1f}", ha="center", va="center", fontsize=8
+                            )
 
+            plt.tight_layout()
             plt.savefig(
-                DIR_PLOTS + f"heatmap_plot_{var}_{VAR_ELECTORAL_YEAR_CHOSEN}.png"
+                f"{DIR_PLOTS}/heatmap_{var}_{n_bins}x{n_bins}_{VAR_ELECTORAL_YEAR_CHOSEN}.png"
             )
+
             if show:
-                plt.tight_layout()
                 plt.show()
+
+            plt.close()

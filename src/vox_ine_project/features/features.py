@@ -203,40 +203,28 @@ def create_agg_data_evolution_plot(
     return agg, overall_delta, default_distribution
 
 
-def create_agg_data_heatmap_plot(df: pd.DataFrame, value: str):
-    # 1. Compute percentiles for col_a and col_b
-    quantiles_a = df["renta_neta_media_hogar"].quantile([0.25, 0.75]).values
-    quantiles_b = df["pct_ext"].quantile([0.25, 0.75]).values
+def create_agg_data_heatmap_plot(df: pd.DataFrame, value: str, n_bins: int = 3):
+    df = df.copy()
 
-    # 2. Define a function to assign bins
-    def assign_bin(value, q25, q75):
-        if value <= q25:
-            return 0  # bottom 25%
-        elif value <= q75:
-            return 1  # middle 50%
-        else:
-            return 2  # top 25%
-
-    df["bin_a"] = df["renta_neta_media_hogar"].apply(
-        assign_bin, q25=quantiles_a[0], q75=quantiles_a[1]
-    )
-    df["bin_b"] = df["pct_ext"].apply(
-        assign_bin, q25=quantiles_b[0], q75=quantiles_b[1]
+    # Create quantile bins
+    df["bin_a"] = pd.qcut(
+        df["renta_neta_media_hogar"], q=n_bins, labels=False, duplicates="drop"
     )
 
-    # 3. Aggregate: sum of votes per bin
+    df["bin_b"] = pd.qcut(df["pct_ext"], q=n_bins, labels=False, duplicates="drop")
+
+    # Aggregate
     if value == "population_share":
-        agg = (
-            df.groupby(["bin_a", "bin_b"]).apply(lambda x: np.sum(x[value])).unstack()
-        )  # rows=bin_a, cols=bin_b
-        v_min: float = 5.00
-        v_max: float = 20.00
+        agg = df.groupby(["bin_a", "bin_b"])[value].sum().unstack()
+        v_min, v_max = agg.min().min(), agg.max().max()
+
     else:
         agg = (
             df.groupby(["bin_a", "bin_b"])
             .apply(lambda x: np.average(x[value], weights=x["Población"]))
             .unstack()
-        )  # rows=bin_a, cols=bin_b
-        v_min: float = np.quantile(df[value], 0.25)
-        v_max: float = np.quantile(df[value], 0.75)
+        )
+        v_min = np.nanpercentile(agg.values, 10)
+        v_max = np.nanpercentile(agg.values, 90)
+
     return agg, v_min, v_max
