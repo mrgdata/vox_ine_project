@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ABM Vote Simulation — Model Documentation</title>
+<style>
+  :root {
+    --far-left: #8B008B;
+    --psoe: #E63946;
+    --pp: #1D3557;
+    --vox: #6A994E;
+    --bg: #fafafa;
+    --card: #ffffff;
+    --border: #e0e0e0;
+    --text: #222;
+    --muted: #666;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.6; padding: 2rem;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.8rem; margin-bottom: .3rem; }
+  h2 { font-size: 1.35rem; margin: 2rem 0 .8rem; border-bottom: 2px solid var(--border); padding-bottom: .3rem; }
+  h3 { font-size: 1.1rem; margin: 1.2rem 0 .5rem; }
+  p, li { margin-bottom: .5rem; }
+  .subtitle { color: var(--muted); font-size: .95rem; margin-bottom: 1.5rem; }
+  a { color: var(--psoe); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.2rem 1.5rem; margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: .8rem 0;
+    font-size: .92rem;
+  }
+  th, td { padding: .55rem .7rem; border: 1px solid var(--border); text-align: left; }
+  th { background: #f0f0f0; font-weight: 600; }
+  td code { background: #f5f5f5; padding: .1rem .35rem; border-radius: 3px; font-size: .88rem; }
+
+  .party-dot {
+    display: inline-block; width: 12px; height: 12px;
+    border-radius: 50%; margin-right: 6px; vertical-align: middle;
+  }
+  .dot-fl  { background: var(--far-left); }
+  .dot-ps  { background: var(--psoe); }
+  .dot-pp  { background: var(--pp); }
+  .dot-vox { background: var(--vox); }
+
+  .formula {
+    background: #f7f7f7; border-left: 3px solid var(--vox);
+    padding: .8rem 1rem; margin: .8rem 0; font-family: 'Consolas', monospace;
+    font-size: .88rem; overflow-x: auto; white-space: pre-wrap;
+  }
+
+  ul { padding-left: 1.4rem; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+
+  .highlight { font-weight: 600; }
+  .tag {
+    display: inline-block; font-size: .78rem; padding: .15rem .5rem;
+    border-radius: 4px; color: #fff; margin-right: .3rem;
+  }
+  .tag-fl  { background: var(--far-left); }
+  .tag-ps  { background: var(--psoe); }
+  .tag-pp  { background: var(--pp); }
+  .tag-vox { background: var(--vox); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>ABM Vote Simulation &mdash; Model Documentation</h1>
+<p class="subtitle">
+  Agent-Based Model of Spanish vote-preference dynamics under rising immigration.<br>
+  Based on <a href="https://medium.com/@mromgar99/el-futuro-de-vox-est%C3%A1-en-getafe-no-en-el-barrio-salamanca-07ccadac14f2" target="_blank">
+  &ldquo;El futuro de Vox est&aacute; en Getafe, no en el Barrio Salamanca&rdquo;</a>
+  by Manuel Romero (Dec 2025).
+</p>
+
+<!-- ─── OVERVIEW ────────────────────────────────────── -->
+<h2>1. Model Overview</h2>
+<div class="card">
+  <p>The simulation creates a population of <strong>individual agents</strong>, each with a personal income, a birth origin (native or foreign-born), and a neighbourhood assignment. At every time step each agent votes for one of four parties via a probabilistic utility function. Between steps, new foreign-born agents enter the population, concentrating in lower-income neighbourhoods, while native incomes remain constant.</p>
+  <p>The goal is to show how <em>rising immigration that concentrates in poor areas</em> shifts vote shares &mdash; particularly the growth of far-right support among low-income natives.</p>
+</div>
+
+<!-- ─── CONFIG VARIABLES ───────────────────────────── -->
+<h2>2. Configuration Variables</h2>
+<div class="card">
+<table>
+  <thead>
+    <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>N_AGENTS</code></td><td>5 000</td>
+      <td>Number of agents in the initial population. Larger values reduce noise but increase runtime.</td>
+    </tr>
+    <tr>
+      <td><code>N_NEIGHBOURHOODS</code></td><td>20</td>
+      <td>Number of neighbourhoods, ranked from poorest (id&nbsp;0) to richest (id&nbsp;19). Income level is evenly spaced: <code>(id + 0.5) / N</code>.</td>
+    </tr>
+    <tr>
+      <td><code>N_STEPS</code></td><td>20</td>
+      <td>Simulation time steps (loosely analogous to years). At each step, votes are tallied and new immigrants arrive.</td>
+    </tr>
+    <tr>
+      <td><code>INITIAL_FOREIGN_PCT</code></td><td>0.20 (20%)</td>
+      <td>Proportion of the initial population that is foreign-born. Calibrated to Spain's 2026 level.</td>
+    </tr>
+    <tr>
+      <td><code>FOREIGN_GROWTH_RATE</code></td><td>0.02 (2%)</td>
+      <td>Each step, <code>len(agents) &times; 0.02</code> new foreign-born agents are added. Drives the demographic shift. Consistent with recent trends in Spain (Last 10Y 13%->20%).</td>
+    </tr>
+    <tr>
+      <td><code>NATIVE_INCOME_PREMIUM</code></td><td>1.40</td>
+      <td>Multiplicative factor applied to native incomes at creation. A value of 1.40 means natives earn on average ~40% more than foreign-born agents. Calibrated with INE Data (Foreign-born earn 29% less)</td>
+    </tr>
+    <tr>
+      <td><code>SEED</code></td><td>42</td>
+      <td>Random seed for reproducibility. Change to explore stochastic variation.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ─── AGENTS ─────────────────────────────────────── -->
+<h2>3. Agent Properties</h2>
+<div class="card">
+<table>
+  <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>id</code></td><td>int</td>
+      <td>Unique identifier, assigned sequentially.</td>
+    </tr>
+    <tr>
+      <td><code>income</code></td><td>float [0, 1]</td>
+      <td>Personal income, normalised. Generated from a Beta distribution (see below). <strong>Fixed at creation</strong> &mdash; does not change over time.</td>
+    </tr>
+    <tr>
+      <td><code>is_native</code></td><td>bool</td>
+      <td><code>True</code> = born in Spain, <code>False</code> = foreign-born. Determined randomly according to the current foreign-born share.</td>
+    </tr>
+    <tr>
+      <td><code>neighbourhood_id</code></td><td>int</td>
+      <td>Index of the neighbourhood the agent lives in (0 = poorest, N&minus;1 = richest). Assigned at creation and fixed.</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ─── INCOME GENERATION ──────────────────────────── -->
+<h2>4. Income Generation</h2>
+<div class="card">
+  <p>Income is drawn from a <strong>Beta distribution</strong>, then clipped to [0,&nbsp;1]:</p>
+  <div class="cols">
+    <div>
+      <h3>Native-born</h3>
+      <div class="formula">income = clip(Beta(2.5, 2.5) &times; 1.20, 0, 1)</div>
+      <p>Symmetric bell-shaped distribution (mean&nbsp;&asymp;&nbsp;0.5), scaled up by the <code>NATIVE_INCOME_PREMIUM</code> factor of 1.20. Effective mean &asymp;&nbsp;0.60.</p>
+    </div>
+    <div>
+      <h3>Foreign-born</h3>
+      <div class="formula">income = clip(Beta(2, 4), 0, 1)</div>
+      <p>Right-skewed distribution (mean&nbsp;&asymp;&nbsp;0.33). Foreign-born agents are concentrated in the lower income range.</p>
+    </div>
+  </div>
+  <p style="margin-top:.8rem">This produces a realistic ~20% income gap between the two populations, matching empirical data.</p>
+</div>
+
+<!-- ─── NEIGHBOURHOOD ASSIGNMENT ───────────────────── -->
+<h2>5. Neighbourhood Assignment</h2>
+<div class="card">
+  <p>Each agent is assigned to a neighbourhood probabilistically at creation. The probability is based on a <strong>Gaussian kernel</strong> centred on the agent's income:</p>
+
+  <h3>Native-born</h3>
+  <div class="formula">P(neighbourhood<sub>k</sub>) &prop; exp(&minus;3.0 &times; (income &minus; nb_income<sub>k</sub>)&sup2;)</div>
+  <p>Natives settle near neighbourhoods matching their income peers &mdash; a tight, symmetric clustering.</p>
+
+  <h3>Foreign-born</h3>
+  <div class="formula">P(neighbourhood<sub>k</sub>) &prop; exp(&minus;2.0 &times; (income &minus; nb_income<sub>k</sub>)&sup2;) &times; exp(&minus;1.5 &times; nb_income<sub>k</sub>)</div>
+  <p>Foreign-born agents also cluster by income, but with an additional <strong>penalty for high-income neighbourhoods</strong> (<code>exp(&minus;1.5 &times; nb_income)</code>). This replicates the article's key finding: immigrants concentrate in lower-income areas regardless of their personal income.</p>
+</div>
+
+<!-- ─── VOTE FUNCTION ──────────────────────────────── -->
+<h2>6. Vote Preference Function</h2>
+<div class="card">
+  <p>Each agent computes a <strong>utility score</strong> for each of the four parties. The scores pass through a <strong>softmax</strong> function to produce vote probabilities, and the agent draws a single vote stochastically.</p>
+  <div class="formula">P(party<sub>j</sub>) = exp(u<sub>j</sub>) / &Sigma; exp(u<sub>k</sub>)</div>
+  <p>The utility <code>u</code> for each party is the sum of four components:</p>
+</div>
+
+<!-- Factor 1 -->
+<div class="card">
+  <h3>Factor 1 &mdash; Personal Income</h3>
+  <p>Higher income favours the right; lower income favours the left. This is the traditional <em>class vote</em>.</p>
+  <table>
+    <thead><tr><th>Party</th><th>Utility contribution</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-fl">Far-Left</span></td><td><code>&minus;0.5 + 1.0 &times; (1 &minus; income)</code></td><td>Modest boost at low income</td></tr>
+      <tr><td><span class="tag tag-ps">PSOE</span></td><td><code>+0.5 + 1.5 &times; (1 &minus; income)</code></td><td>Strong low-income base</td></tr>
+      <tr><td><span class="tag tag-pp">PP</span></td><td><code>&minus;0.5 + 2.0 &times; income</code></td><td>Strong high-income correlation</td></tr>
+      <tr><td><span class="tag tag-vox">VOX</span></td><td><code>&minus;0.3 + 0.3 &times; (1 &minus; income)</code></td><td>Slight low-income lean (post-2019 shift)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Factor 2 -->
+<div class="card">
+  <h3>Factor 2 &mdash; Birth Origin (Native vs Foreign-born)</h3>
+  <p>Foreign-born agents lean left; native agents lean slightly right and further towards the far-right.</p>
+  <table>
+    <thead><tr><th>Party</th><th>Native bonus</th><th>Foreign-born bonus</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-fl">Far-Left</span></td><td>&minus;0.2</td><td>+0.5</td></tr>
+      <tr><td><span class="tag tag-ps">PSOE</span></td><td>&minus;0.1</td><td>+0.4</td></tr>
+      <tr><td><span class="tag tag-pp">PP</span></td><td>+0.2</td><td>&minus;0.3</td></tr>
+      <tr><td><span class="tag tag-vox">VOX</span></td><td>+0.3</td><td><strong>&minus;1.0</strong></td></tr>
+    </tbody>
+  </table>
+  <p>Note the strong <strong>&minus;1.0 penalty</strong> for VOX among foreign-born agents &mdash; they very rarely vote far-right.</p>
+</div>
+
+<!-- Factor 3 -->
+<div class="card">
+  <h3>Factor 3 &mdash; Neighbourhood Immigration &times; Income Interaction <em>(natives only)</em></h3>
+  <p>This is the <strong>core mechanism</strong> from the article. The effect of local immigration on vote choice depends on neighbourhood wealth:</p>
+  <div class="formula">sensitivity = max(0, 1.5 &times; (1 &minus; nb_avg_income))</div>
+  <p>In <strong>poor neighbourhoods</strong> (low <code>nb_avg_income</code>), sensitivity is high (&asymp;&nbsp;1.5). In <strong>rich neighbourhoods</strong>, it approaches zero &mdash; the <em>&ldquo;shield of wealth&rdquo;</em>.</p>
+  <table>
+    <thead><tr><th>Party</th><th>Utility contribution</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-vox">VOX</span></td><td><code>+sensitivity &times; nb_foreign% &times; 5.0</code></td><td>Large gains in poor, high-immigration areas</td></tr>
+      <tr><td><span class="tag tag-ps">PSOE</span></td><td><code>&minus;sensitivity &times; nb_foreign% &times; 4.0</code></td><td>Loses support where immigration is felt most</td></tr>
+      <tr><td><span class="tag tag-pp">PP</span></td><td><code>+sensitivity &times; nb_foreign% &times; 0.5</code></td><td>Picks up a small share</td></tr>
+    </tbody>
+  </table>
+  <p><strong>This factor does not apply to foreign-born agents</strong>, who do not shift right in response to co-ethnic concentration.</p>
+</div>
+
+<!-- Factor 4 -->
+<div class="card">
+  <h3>Factor 4 &mdash; Neighbourhood Income (Class-Vote Reinforcement)</h3>
+  <table>
+    <thead><tr><th>Party</th><th>Utility contribution</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag tag-ps">PSOE</span></td><td><code>+0.3 &times; (1 &minus; nb_avg_income)</code></td></tr>
+      <tr><td><span class="tag tag-pp">PP</span></td><td><code>+0.3 &times; nb_avg_income</code></td></tr>
+    </tbody>
+  </table>
+  <p>Living in a poor neighbourhood further reinforces PSOE support; living in a rich one further reinforces PP. This captures peer/contextual effects beyond individual income.</p>
+</div>
+
+<!-- ─── SIMULATION LOOP ────────────────────────────── -->
+<h2>7. Simulation Dynamics</h2>
+<div class="card">
+  <p>At each time step the simulation performs:</p>
+  <ol style="padding-left:1.4rem">
+    <li><strong>Compute neighbourhood statistics</strong> &mdash; average income and % foreign-born for each neighbourhood.</li>
+    <li><strong>Vote</strong> &mdash; every agent evaluates the utility function and casts a probabilistic vote.</li>
+    <li><strong>Record results</strong> &mdash; party vote shares and overall foreign-born % are stored.</li>
+    <li><strong>Add immigrants</strong> &mdash; <code>len(agents) &times; FOREIGN_GROWTH_RATE</code> new foreign-born agents are created with low incomes and assigned to (mostly low-income) neighbourhoods.</li>
+  </ol>
+
+  <h3>What changes over time</h3>
+  <ul>
+    <li>Total population grows (new immigrants each step).</li>
+    <li>Foreign-born share rises from ~14% upward.</li>
+    <li>Poor neighbourhoods become progressively more diverse.</li>
+    <li>Rich neighbourhoods remain largely unaffected.</li>
+  </ul>
+
+  <h3>What stays constant</h3>
+  <ul>
+    <li>Each agent's personal income (fixed at birth).</li>
+    <li>Each agent's neighbourhood assignment.</li>
+    <li>Neighbourhood income levels (structural).</li>
+    <li>All utility weights and model parameters.</li>
+  </ul>
+</div>
+
+<!-- ─── KEY MECHANISMS ─────────────────────────────── -->
+<h2>8. Summary of Key Mechanisms</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Mechanism</th><th>Real-world basis (article)</th><th>Model implementation</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Class vote</td>
+        <td>Poor &rarr; PSOE, Rich &rarr; PP (traditional pattern)</td>
+        <td>Personal income &times; party-specific weights (Factor 1)</td>
+      </tr>
+      <tr>
+        <td>Native income premium</td>
+        <td>Natives earn ~20% more than foreign-born</td>
+        <td><code>NATIVE_INCOME_PREMIUM = 1.20</code> applied at agent creation</td>
+      </tr>
+      <tr>
+        <td>Immigrant concentration in poor areas</td>
+        <td>Foreign-born population settles in low-rent neighbourhoods</td>
+        <td>Neighbourhood assignment penalises high-income areas for foreign-born</td>
+      </tr>
+      <tr>
+        <td>Immigration &rarr; far-right in poor areas</td>
+        <td>VOX peaks at 16.9% in low-income + high-immigration zones</td>
+        <td>Factor 3: sensitivity inversely proportional to neighbourhood income</td>
+      </tr>
+      <tr>
+        <td>&ldquo;Shield of wealth&rdquo;</td>
+        <td>VOX flat at ~13.8% in rich areas regardless of immigration</td>
+        <td>Sensitivity &rarr; 0 when <code>nb_avg_income</code> &rarr; 1</td>
+      </tr>
+      <tr>
+        <td>Foreign-born lean left</td>
+        <td>Immigration doesn't compensate PSOE losses among native defectors</td>
+        <td>Factor 2: strong left bonus and &minus;1.5 VOX penalty for foreign-born</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ─── OUTPUTS ─────────────────────────────────────── -->
+<h2>9. Outputs</h2>
+<div class="card">
+  <ul>
+    <li><strong>Console table</strong> &mdash; vote share (%) for each party and foreign-born % at regular intervals.</li>
+    <li><strong>Change summary</strong> &mdash; percentage-point change from first to last step for each party.</li>
+    <li><strong>Plot</strong> (<code>abm_vote_simulation.png</code>) &mdash; two-panel chart: vote share evolution (top) and foreign-born % growth (bottom).</li>
+  </ul>
+</div>
+
+<p style="margin-top:2rem;color:var(--muted);font-size:.85rem;">
+  Generated for <code>abm_vote_simulation.py</code> &bull; Model calibrated to Spanish census-tract electoral data (2023).
+</p>
+
+</div>
+</body>
+</html>
