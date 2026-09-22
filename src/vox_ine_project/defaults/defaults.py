@@ -1,5 +1,5 @@
-VAR_CAT_BOOL = True
-VAR_PV_BOOL = True
+VAR_CAT_BOOL = False
+VAR_PV_BOOL = False
 VAR_ELECTORAL_YEAR_CHOSEN = 2023
 VAR_LANGUAGE = "en"  # "en" or "es"
 
@@ -24,29 +24,59 @@ DICT_DISTRIBUTION_INCOME = {
 
 DICT_HEATMAP = {
     "PP": ["Blues", {"en": "Popular Party", "es": "Partido Popular"}],
-    "Right": ["Blues", {"en": "Right-Wing parties (excl. VOX)", "es": "Partidos de derecha (excl. VOX)"}],
+    "Right": [
+        "Blues",
+        {
+            "en": "Right-Wing parties (excl. VOX)",
+            "es": "Partidos de derecha (excl. VOX)",
+        },
+    ],
     "Left": ["Oranges", {"en": "Left-Wing parties", "es": "Partidos de izquierda"}],
-    "Non-nationalist Left": ["Reds", {"en": "Non-nationalist Left-Wing parties", "es": "Partidos de izquierda no nacionalistas"}],
-    "Nationalist Left": ["Oranges", {"en": "Nationalist Left-Wing parties", "es": "Partidos de izquierda nacionalistas"}],
-    "Nationalist Right": ["Yellows", {"en": "Nationalist Right-Wing parties", "es": "Partidos de derecha nacionalistas"}],
-    "Non-nationalist Right": ["Blues", {"en": "Non-nationalist Right-Wing parties", "es": "Partidos de derecha no nacionalistas"}],
+    "Non-nationalist Left": [
+        "Reds",
+        {
+            "en": "Non-nationalist Left-Wing parties",
+            "es": "Partidos de izquierda no nacionalistas",
+        },
+    ],
+    "Nationalist Left": [
+        "Oranges",
+        {
+            "en": "Nationalist Left-Wing parties",
+            "es": "Partidos de izquierda nacionalistas",
+        },
+    ],
+    "Nationalist Right": [
+        "Greens",
+        {
+            "en": "Nationalist Right-Wing parties",
+            "es": "Partidos de derecha nacionalistas",
+        },
+    ],
+    "Non-nationalist Right": [
+        "Blues",
+        {
+            "en": "Non-nationalist Right-Wing parties",
+            "es": "Partidos de derecha no nacionalistas",
+        },
+    ],
     "PSOE": ["Reds", {"en": "Socialist Party", "es": "Partido Socialista"}],
     "SUMAR": ["Oranges", {"en": "SUMAR", "es": "SUMAR"}],
     "VOX": ["Greens", {"en": "VOX", "es": "VOX"}],
     "Other": ["Purples", {"en": "Non-aligned parties", "es": "Partidos no alineados"}],
-    "population_share": ["Greens", {"en": "population", "es": "población"}],
+    "population_share": ["PuBuGn", {"en": "population", "es": "población"}],
 }
 
 # bin name per n_bins, used to label heatmap axes (e.g. Quartile, Decile...)
 DICT_BIN_NAMES = {
     2: {"en": "Half", "es": "Mitad"},
-    3: {"en": "Tertile", "es": "Tercil"},
-    4: {"en": "Quartile", "es": "Cuartil"},
-    5: {"en": "Quintile", "es": "Quintil"},
-    10: {"en": "Decile", "es": "Decil"},
-    20: {"en": "Ventile", "es": "Ventil"},
-    25: {"en": "Quantile", "es": "Cuantil"},
-    100: {"en": "Percentile", "es": "Percentil"},
+    3: {"en": "Tertile", "es": "Tercile"},
+    4: {"en": "Quartile", "es": "Cuartile"},
+    5: {"en": "Quintile", "es": "Quintile"},
+    10: {"en": "Decile", "es": "Decile"},
+    20: {"en": "Ventile", "es": "Ventile"},
+    25: {"en": "Quantile", "es": "Cuantile"},
+    100: {"en": "Percentile", "es": "Percentile"},
 }
 DICT_BIN_NAME_DEFAULT = {"en": "Group", "es": "Grupo"}
 

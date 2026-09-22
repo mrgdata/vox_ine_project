@@ -1,31 +1,33 @@
-import pandas as pd
-import numpy as np
 import os
+
+import numpy as np
+import pandas as pd
 from loguru import logger
 from matplotlib import pyplot as plt
+
 from vox_ine_project.defaults.defaults import (
+    DICT_BIN_NAME_DEFAULT,
+    DICT_BIN_NAMES,
+    DICT_HEATMAP,
+    DICT_HEATMAP_LABELS,
     DIR_DATA,
     DIR_PLOTS,
+    EXTENSION,
     FILE_1,
     FILE_2,
     FILE_3,
     FILE_4,
-    EXTENSION,
     SEPARATOR,
     VAR_ELECTORAL_YEAR_CHOSEN,
     VAR_LANGUAGE,
-    DICT_HEATMAP,
-    DICT_BIN_NAMES,
-    DICT_BIN_NAME_DEFAULT,
-    DICT_HEATMAP_LABELS,
 )
 from vox_ine_project.features.features import (
+    clean_election_data,
     clean_ine_data,
-    merge_ine_data,
-    impute_missing_data,
     create_agg_data_evolution_plot,
     create_agg_data_heatmap_plot,
-    clean_election_data,
+    impute_missing_data,
+    merge_ine_data,
 )
 
 
@@ -113,18 +115,22 @@ class GeneratePlots:
         self, show: bool = False, n_bins: int = 3, language: str = VAR_LANGUAGE
     ):
         if language not in DICT_HEATMAP_LABELS:
-            logger.warning(f"Language '{language}' is not supported, defaulting to 'en'")
+            logger.warning(
+                f"Language '{language}' is not supported, defaulting to 'en'"
+            )
             language = "en"
         text = DICT_HEATMAP_LABELS[language]
         bin_name = DICT_BIN_NAMES.get(n_bins, DICT_BIN_NAME_DEFAULT)[language]
 
-        for var in DICT_HEATMAP.keys():
+        for var in DICT_HEATMAP:
+            if var not in self.df_heatmap.columns:
+                continue
             var_label = DICT_HEATMAP[var][1][language]
             df_agg, v_min, v_max = create_agg_data_heatmap_plot(
                 self.df_heatmap, var, n_bins=n_bins
             )
 
-            fig, ax = plt.subplots(figsize=(6, 6))
+            _, ax = plt.subplots(figsize=(6, 6))
 
             im = ax.imshow(
                 df_agg.values,

@@ -1,13 +1,14 @@
+import numpy as np
 import pandas as pd
 from loguru import logger
-import numpy as np
+
 from vox_ine_project.defaults.defaults import (
-    VAR_CAT_BOOL,
-    TUPLE_CAT_PROVINCES,
-    TUPLE_PV_PROVINCES,
-    VAR_PV_BOOL,
     DICT_DISTRIBUTION_INCOME,
     DICT_PARTY_IDEOLOGY,
+    TUPLE_CAT_PROVINCES,
+    TUPLE_PV_PROVINCES,
+    VAR_CAT_BOOL,
+    VAR_PV_BOOL,
 )
 
 
@@ -155,7 +156,7 @@ def impute_missing_data(df: pd.DataFrame):
 def create_agg_data_evolution_plot(
     df: pd.DataFrame, default_distribution: str = "ventile"
 ):
-    if default_distribution not in DICT_DISTRIBUTION_INCOME.keys():
+    if default_distribution not in DICT_DISTRIBUTION_INCOME:
         logger.warning(
             "chosen distribution is not available, change defaults or 'ventile' will be chosen"
         )
