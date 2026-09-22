@@ -47,6 +47,26 @@ Data regarding Catalonia and Basque Country have been filtered out regarding the
 The party classification is open to interpretation, but national-wide parties have been classified in left or right, separating only VOX and PSOE, since their comparison was the objetive of the first project. Other parties outside these classification have been labeled together.
 
 
+## Running the project
+
+`src/main.py` is the entry point and accepts the following command-line arguments (all optional; defaults are taken from `defaults.py` when omitted):
+
+| Argument | Choices | Default | Description |
+|---|---|---|---|
+| `--year` | `2019`, `2023` | `VAR_ELECTORAL_YEAR_CHOSEN` | Electoral year to analyze |
+| `--language` | `en`, `es` | `VAR_LANGUAGE` | Language used for heatmap titles and axis labels |
+| `--n-bins` | any positive integer | `4` | Number of bins used for the heatmap quantile grid |
+| `--party-scheme` | `main_parties`, `left_right_nat` | `VAR_PARTY_IDEOLOGY_SCHEME_23` | 2023 party ideology classification scheme (main parties vs. nationalist/non-nationalist split) |
+
+Example:
+
+```bash
+python src/main.py --year 2023 --language es --n-bins 4 --party-scheme main_parties
+```
+
+A ready-to-use VS Code debug configuration is provided in `.vscode/launch.json` ("Debug main.py"), which passes these same arguments and can be edited to try different combinations.
+
+
 ## Project structure
 
 ```vox_ine_project/

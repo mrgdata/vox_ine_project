@@ -13,7 +13,11 @@ from vox_ine_project.defaults.defaults import (
     EXTENSION,
     SEPARATOR,
     VAR_ELECTORAL_YEAR_CHOSEN,
+    VAR_LANGUAGE,
     DICT_HEATMAP,
+    DICT_BIN_NAMES,
+    DICT_BIN_NAME_DEFAULT,
+    DICT_HEATMAP_LABELS,
 )
 from vox_ine_project.features.features import (
     clean_ine_data,
@@ -26,12 +30,12 @@ from vox_ine_project.features.features import (
 
 
 class GeneratePlots:
-    def run(self):
+    def run(self, n_bins: int = 4, language: str = VAR_LANGUAGE):
         self._load_data()
         self._clean_data()
         self._create_plot_data()
         self._evolution_plot()
-        self._heatmap_plot(False, n_bins=4)
+        self._heatmap_plot(False, n_bins=n_bins, language=language)
         logger.success("Project have been performed completely!")
 
     def _load_data(self):
@@ -105,8 +109,17 @@ class GeneratePlots:
             plt.tight_layout()
             plt.show()
 
-    def _heatmap_plot(self, show: bool = False, n_bins: int = 3):
+    def _heatmap_plot(
+        self, show: bool = False, n_bins: int = 3, language: str = VAR_LANGUAGE
+    ):
+        if language not in DICT_HEATMAP_LABELS:
+            logger.warning(f"Language '{language}' is not supported, defaulting to 'en'")
+            language = "en"
+        text = DICT_HEATMAP_LABELS[language]
+        bin_name = DICT_BIN_NAMES.get(n_bins, DICT_BIN_NAME_DEFAULT)[language]
+
         for var in DICT_HEATMAP.keys():
+            var_label = DICT_HEATMAP[var][1][language]
             df_agg, v_min, v_max = create_agg_data_heatmap_plot(
                 self.df_heatmap, var, n_bins=n_bins
             )
@@ -131,13 +144,13 @@ class GeneratePlots:
             ax.set_xticklabels(labels)
             ax.set_yticklabels(labels)
 
-            ax.set_xlabel("Percentage of Immigrant Population (quantiles)")
-            ax.set_ylabel("Household Net Income (quantiles)")
-            ax.set_title(f"{DICT_HEATMAP[var][1]} by Income × Immigration")
+            ax.set_xlabel(text["xlabel"].format(bin_name=bin_name))
+            ax.set_ylabel(text["ylabel"].format(bin_name=bin_name))
+            ax.set_title(text["title"].format(var_label=var_label))
 
             # Colorbar
             cbar = plt.colorbar(im, ax=ax)
-            cbar.set_label(DICT_HEATMAP[var][1])
+            cbar.set_label(text["cbar_label"].format(var_label=var_label))
 
             # Annotate only for small grids
             if n_bins <= 5:
