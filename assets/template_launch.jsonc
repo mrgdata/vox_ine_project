@@ -19,7 +19,9 @@
                 "--n-bins",
                 "4",
                 "--party-scheme",
-                "main_parties" // "left_right_nat", "main_parties"
+                "main_parties", // "left_right_nat", "main_parties"
+                "--no-exclude-catalonia", // direct boolean argument
+                "--no-exclude-basque-country" // direct boolean argument
             ]
         }
     ]

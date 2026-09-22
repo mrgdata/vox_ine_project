@@ -18,8 +18,10 @@ from vox_ine_project.defaults.defaults import (
     FILE_3,
     FILE_4,
     SEPARATOR,
+    VAR_CAT_BOOL,
     VAR_ELECTORAL_YEAR_CHOSEN,
     VAR_LANGUAGE,
+    VAR_PV_BOOL,
 )
 from vox_ine_project.features.features import (
     clean_election_data,
@@ -32,9 +34,15 @@ from vox_ine_project.features.features import (
 
 
 class GeneratePlots:
-    def run(self, n_bins: int = 4, language: str = VAR_LANGUAGE):
+    def run(
+        self,
+        n_bins: int = 4,
+        language: str = VAR_LANGUAGE,
+        cat_bool: bool = VAR_CAT_BOOL,
+        pv_bool: bool = VAR_PV_BOOL,
+    ):
         self._load_data()
-        self._clean_data()
+        self._clean_data(cat_bool=cat_bool, pv_bool=pv_bool)
         self._create_plot_data()
         self._evolution_plot()
         self._heatmap_plot(False, n_bins=n_bins, language=language)
@@ -61,11 +69,11 @@ class GeneratePlots:
 
         return self.df_1_ine, self.df_2_ine, self.df_3_ine, self.df_elections
 
-    def _clean_data(self):
+    def _clean_data(self, cat_bool: bool = VAR_CAT_BOOL, pv_bool: bool = VAR_PV_BOOL):
         logger.info("Cleaning data...")
-        self.df_1_ine = clean_ine_data(self.df_1_ine)
-        self.df_2_ine = clean_ine_data(self.df_2_ine)
-        self.df_3_ine = clean_ine_data(self.df_3_ine)
+        self.df_1_ine = clean_ine_data(self.df_1_ine, cat_bool=cat_bool, pv_bool=pv_bool)
+        self.df_2_ine = clean_ine_data(self.df_2_ine, cat_bool=cat_bool, pv_bool=pv_bool)
+        self.df_3_ine = clean_ine_data(self.df_3_ine, cat_bool=cat_bool, pv_bool=pv_bool)
         self.df_elections = clean_election_data(self.df_elections)
 
     def _create_plot_data(self):

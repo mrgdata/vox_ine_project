@@ -12,7 +12,9 @@ from vox_ine_project.defaults.defaults import (
 )
 
 
-def clean_ine_data(df: pd.DataFrame):
+def clean_ine_data(
+    df: pd.DataFrame, cat_bool: bool = VAR_CAT_BOOL, pv_bool: bool = VAR_PV_BOOL
+):
     """_summary_
 
     Args:
@@ -39,10 +41,11 @@ def clean_ine_data(df: pd.DataFrame):
     )
     df["key_seccion"] = df["Secciones"].str[:10]
 
-    if VAR_CAT_BOOL:
+    # passed explicitly from generate_plots instead of read from defaults
+    if cat_bool:
         logger.debug("filtering out catalan provinces")
         df = df[~df["key_seccion"].str.startswith(TUPLE_CAT_PROVINCES)]
-    if VAR_PV_BOOL:
+    if pv_bool:
         logger.debug("filtering out basque provinces")
         df = df[~df["key_seccion"].str.startswith(TUPLE_PV_PROVINCES)]
 

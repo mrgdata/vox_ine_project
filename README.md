@@ -57,11 +57,13 @@ The party classification is open to interpretation, but national-wide parties ha
 | `--language` | `en`, `es` | `VAR_LANGUAGE` | Language used for heatmap titles and axis labels |
 | `--n-bins` | any positive integer | `4` | Number of bins used for the heatmap quantile grid |
 | `--party-scheme` | `main_parties`, `left_right_nat` | `VAR_PARTY_IDEOLOGY_SCHEME_23` | 2023 party ideology classification scheme (main parties vs. nationalist/non-nationalist split) |
+| `--exclude-catalonia` / `--no-exclude-catalonia` | flag | `VAR_CAT_BOOL` | Filter out Catalan provinces from the analysis |
+| `--exclude-basque-country` / `--no-exclude-basque-country` | flag | `VAR_PV_BOOL` | Filter out Basque Country provinces from the analysis |
 
 Example:
 
 ```bash
-python src/main.py --year 2023 --language es --n-bins 4 --party-scheme main_parties
+python src/main.py --year 2023 --language es --n-bins 4 --party-scheme main_parties --no-exclude-catalonia --no-exclude-basque-country
 ```
 
 A ready-to-use VS Code debug configuration is provided in `.vscode/launch.json` ("Debug main.py"), which passes these same arguments and can be edited to try different combinations.

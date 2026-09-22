@@ -30,6 +30,18 @@ def parse_args() -> argparse.Namespace:
         default=defaults.VAR_PARTY_IDEOLOGY_SCHEME_23,
         help="2023 party ideology classification scheme",
     )
+    parser.add_argument(
+        "--exclude-catalonia",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.VAR_CAT_BOOL,
+        help="Filter out Catalan provinces from the analysis",
+    )
+    parser.add_argument(
+        "--exclude-basque-country",
+        action=argparse.BooleanOptionalAction,
+        default=defaults.VAR_PV_BOOL,
+        help="Filter out Basque Country provinces from the analysis",
+    )
     return parser.parse_args()
 
 
@@ -58,4 +70,9 @@ if __name__ == "__main__":
     from generate_plots import GeneratePlots
 
     project_execution = GeneratePlots()
-    project_execution.run(n_bins=args.n_bins, language=args.language)
+    project_execution.run(
+        n_bins=args.n_bins,
+        language=args.language,
+        cat_bool=args.exclude_catalonia,
+        pv_bool=args.exclude_basque_country,
+    )
