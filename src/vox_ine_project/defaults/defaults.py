@@ -3,6 +3,9 @@ VAR_PV_BOOL = False
 VAR_ELECTORAL_YEAR_CHOSEN = 2023
 VAR_LANGUAGE = "en"  # "en" or "es"
 
+# predictors used in the multinomial logit model of dominant ideology
+LIST_LOGIT_FEATURES = ["pct_ext", "pct_america", "pct_africa", "renta_neta_media_hogar"]
+
 TUPLE_CAT_PROVINCES = ("08", "17", "25", "43")
 TUPLE_PV_PROVINCES = ("01", "20", "48")
 
@@ -83,16 +86,30 @@ DICT_BIN_NAME_DEFAULT = {"en": "Group", "es": "Grupo"}
 
 DICT_HEATMAP_LABELS = {
     "en": {
-        "xlabel": "Percentage of Immigrant Population ({bin_name}s)",
+        "xlabel": "Percentage of {demo_label} ({bin_name}s)",
         "ylabel": "Household Net Income ({bin_name}s)",
-        "title": "{var_label} by Income × Immigration",
+        "title": "{var_label} by Income × {demo_label}",
         "cbar_label": "{var_label}",
     },
     "es": {
-        "xlabel": "Porcentaje de Población Inmigrante ({bin_name}s)",
+        "xlabel": "Porcentaje de {demo_label} ({bin_name}s)",
         "ylabel": "Renta Neta Media del Hogar ({bin_name}s)",
-        "title": "{var_label} por Renta × Inmigración",
+        "title": "{var_label} por Renta × {demo_label}",
         "cbar_label": "{var_label}",
+    },
+}
+
+# demographic variables plotted against income in the heatmaps, with display labels
+LIST_HEATMAP_DEMO_VARS = ["pct_ext", "pct_america", "pct_africa"]
+DICT_DEMO_VAR_LABELS = {
+    "pct_ext": {"en": "Immigrant Population", "es": "Población Inmigrante"},
+    "pct_america": {
+        "en": "Population born in America",
+        "es": "Población nacida en América",
+    },
+    "pct_africa": {
+        "en": "Population born in Africa",
+        "es": "Población nacida en África",
     },
 }
 

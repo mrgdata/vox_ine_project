@@ -1,10 +1,12 @@
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from loguru import logger
 
 from vox_ine_project.defaults.defaults import (
     DICT_DISTRIBUTION_INCOME,
     DICT_PARTY_IDEOLOGY,
+    LIST_LOGIT_FEATURES,
     TUPLE_CAT_PROVINCES,
     TUPLE_PV_PROVINCES,
     VAR_CAT_BOOL,
@@ -15,13 +17,21 @@ from vox_ine_project.defaults.defaults import (
 def clean_ine_data(
     df: pd.DataFrame, cat_bool: bool = VAR_CAT_BOOL, pv_bool: bool = VAR_PV_BOOL
 ):
-    """_summary_
+    """Clean a raw INE indicator dataframe to a consistent per-section format.
 
-    Args:
-        df (pd.DataFrame): _description_
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw INE dataframe, must contain a "Secciones" and a "Total" column.
+    cat_bool : bool, optional
+        If True, filter out Catalan provinces, by default VAR_CAT_BOOL.
+    pv_bool : bool, optional
+        If True, filter out Basque Country provinces, by default VAR_PV_BOOL.
 
-    Returns:
-        pd.DataFrame: _description_
+    Returns
+    -------
+    pd.DataFrame
+        Cleaned dataframe with a numeric "Total" column and a "key_seccion" column.
     """
     if "Distritos" not in df.columns:  # identify df_3 alternative data distribution
         df = df[df["Municipios"].notna() & df["Secciones"].notna()]
@@ -63,6 +73,19 @@ def clean_ine_data(
 
 
 def clean_election_data(df: pd.DataFrame):
+    """Clean raw election results into one row per section with vote shares.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Raw election results, one row per party per polling station.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per "key_seccion", with one column per ideology holding the
+        vote share percentage.
+    """
     df["key_seccion"] = (
         df["codigo_provincia"].astype(str).str.zfill(2)
         + df["codigo_municipio"].astype(str).str.zfill(3)
@@ -89,7 +112,32 @@ def clean_election_data(df: pd.DataFrame):
     return df
 
 
-def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
+def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame, df4: pd.DataFrame):
+    """Merge the four cleaned INE dataframes and derive the analysis variables.
+
+    Parameters
+    ----------
+    df1 : pd.DataFrame
+        Cleaned income indicators dataframe.
+    df2 : pd.DataFrame
+        Cleaned demographic indicators dataframe.
+    df3 : pd.DataFrame
+        Cleaned birth country (continent) indicators dataframe.
+    df4 : pd.DataFrame
+        Cleaned disaggregated birth country indicators dataframe.
+
+    Returns
+    -------
+    pd.DataFrame
+        Merged dataframe with "renta_neta_media_hogar", "pct_ext", "pct_america",
+        "pct_africa" and "population_share" columns, one row per section/period.
+
+    Raises
+    ------
+    ValueError
+        If the income, demographic or birth country variables required for
+        the analysis are missing after merging.
+    """
     df = (
         df1.pivot(
             index=[
@@ -118,6 +166,15 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
             left_index=True,
             right_index=True,
         )
+        .merge(
+            df4.pivot(
+                index=["key_seccion", "Periodo"],
+                columns="País de nacimiento_desagregado",
+                values="Total",
+            ),
+            left_index=True,
+            right_index=True,
+        )
         .reset_index()
     )
 
@@ -139,12 +196,37 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
         raise ValueError(
             "Demgraphic variables for the analysis are missing, check merging process"
         )
+    if "América" in df.columns and "España" in df.columns:
+        df["pct_america"] = round(
+            100 * (df["América"] / (df["América"] + df["España"])), 2
+        )
+    if "África" in df.columns and "España" in df.columns:
+        df["pct_africa"] = round(
+            100 * (df["África"] / (df["África"] + df["España"])), 2
+        )
+    else:
+        raise ValueError(
+            "Disaggregated birth country variables for the analysis are missing, check merging process"
+        )
     df["population_share"] = 100 * (df["Población"] / df["Población"].sum())
 
     return df
 
 
 def impute_missing_data(df: pd.DataFrame):
+    """Impute missing values per year using the "Municipios" group mean.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Merged INE dataframe containing a "Periodo" column with values 2021
+        and 2023.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with missing values imputed, concatenated across both years.
+    """
     dfs_list = []
     for year in [2021, 2023]:
         df_year = df[df["Periodo"] == year]
@@ -169,6 +251,23 @@ def impute_missing_data(df: pd.DataFrame):
 def create_agg_data_evolution_plot(
     df: pd.DataFrame, default_distribution: str = "ventile"
 ):
+    """Aggregate the change in foreign born population by income bucket.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Merged INE dataframe containing "Periodo", "pct_ext", "Población" and
+        "renta_neta_media_hogar" columns.
+    default_distribution : str, optional
+        Income distribution to bucket by (key of DICT_DISTRIBUTION_INCOME),
+        by default "ventile".
+
+    Returns
+    -------
+    tuple[pd.DataFrame, float, str]
+        Aggregated migrants by income bucket, the overall delta in migrants
+        and the distribution name actually used.
+    """
     if default_distribution not in DICT_DISTRIBUTION_INCOME:
         logger.warning(
             "chosen distribution is not available, change defaults or 'ventile' will be chosen"
@@ -217,7 +316,29 @@ def create_agg_data_evolution_plot(
     return agg, overall_delta, default_distribution
 
 
-def create_agg_data_heatmap_plot(df: pd.DataFrame, value: str, n_bins: int = 3):
+def create_agg_data_heatmap_plot(
+    df: pd.DataFrame, value: str, demo_var: str = "pct_ext", n_bins: int = 3
+):
+    """Bin income and a demographic variable into quantiles and aggregate a value.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing "renta_neta_media_hogar", `demo_var` and `value`.
+    value : str
+        Column to aggregate; summed if "population_share", otherwise averaged
+        weighted by "Población".
+    demo_var : str, optional
+        Demographic variable to bin on the second axis, by default "pct_ext".
+    n_bins : int, optional
+        Number of quantile bins per axis, by default 3.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, float, float]
+        Aggregated grid (income bin x demo_var bin) and the color scale
+        bounds (v_min, v_max).
+    """
     df = df.copy()
 
     # Create quantile bins
@@ -225,7 +346,7 @@ def create_agg_data_heatmap_plot(df: pd.DataFrame, value: str, n_bins: int = 3):
         df["renta_neta_media_hogar"], q=n_bins, labels=False, duplicates="drop"
     )
 
-    df["bin_b"] = pd.qcut(df["pct_ext"], q=n_bins, labels=False, duplicates="drop")
+    df["bin_b"] = pd.qcut(df[demo_var], q=n_bins, labels=False, duplicates="drop")
 
     # Aggregate
     if value == "population_share":
@@ -242,3 +363,40 @@ def create_agg_data_heatmap_plot(df: pd.DataFrame, value: str, n_bins: int = 3):
         v_max = np.nanpercentile(agg.values, 90)
 
     return agg, v_min, v_max
+
+
+def fit_ideology_logit_model(
+    df: pd.DataFrame,
+    ideology_cols: list[str],
+    feature_cols: list[str] = LIST_LOGIT_FEATURES,
+):
+    """Fit a multinomial logit model predicting each section's dominant ideology.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data containing `feature_cols` and `ideology_cols`.
+    ideology_cols : list[str]
+        Vote share columns, one per ideology.
+    feature_cols : list[str], optional
+        Numeric predictors for the model, by default LIST_LOGIT_FEATURES.
+
+    Returns
+    -------
+    tuple[MNLogitResultsWrapper, list[str]]
+        Fitted model results and the ideology categories (the first one is
+        the base/reference category).
+    """
+    df = df[feature_cols + ideology_cols].dropna()
+
+    dominant_ideology = df[ideology_cols].idxmax(axis=1)
+    y_cat = pd.Categorical(dominant_ideology)
+    y = pd.Series(y_cat.codes, index=df.index)
+
+    x = sm.add_constant(df[feature_cols])
+
+    model = sm.MNLogit(y, x)
+    result = model.fit(disp=False)
+
+    return result, list(y_cat.categories)
+

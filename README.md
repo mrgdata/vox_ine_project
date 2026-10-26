@@ -46,6 +46,12 @@ Data regarding Catalonia and Basque Country have been filtered out regarding the
 3. **Party classification**
 The party classification is open to interpretation, but national-wide parties have been classified in left or right, separating only VOX and PSOE, since their comparison was the objetive of the first project. Other parties outside these classification have been labeled together.
 
+4. **Heatmaps**
+For every ideology/party and population share variable, a separate heatmap is generated against each of three demographic variables: percentage of foreign born population (`pct_ext`), percentage of population born in America (`pct_america`) and percentage of population born in Africa (`pct_africa`), always binned against household net income.
+
+5. **Multinomial logit model**
+A simple multinomial logit model is fit to predict each census section's dominant ideology (the one with the highest vote share) from `pct_ext`, `pct_america`, `pct_africa` and `renta_neta_media_hogar`. The fitted summary is logged and the resulting coefficients (relative to a base/reference ideology) are plotted.
+
 
 ## Running the project
 
@@ -79,14 +85,14 @@ A ready-to-use VS Code debug configuration is provided in `.vscode/launch.json` 
 │   └── data/
 │   └── plots/
 ├── src/
+│   ├── main.py
+│   ├── generate_plots.py
 │   └── vox_ine_project/
 │       ├── __init__.py
 │       ├── features
-│       │    ├── clean_data.py
-│       ├── defaults
-│       │    └── defaults.py
-│       ├── main.py
-│       └── generate_plots.py
+│       │    └── features.py
+│       └── defaults
+│            └── defaults.py
 ├── tests/
 │   ├── __init__.py
 │   └── test.py -TBD-
