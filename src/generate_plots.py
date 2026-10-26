@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from vox_ine_project.defaults.defaults import (
     DICT_BIN_NAME_DEFAULT,
     DICT_BIN_NAMES,
+    DICT_CONTINENT,
     DICT_HEATMAP,
     DICT_HEATMAP_LABELS,
     DIR_DATA,
@@ -17,6 +18,8 @@ from vox_ine_project.defaults.defaults import (
     FILE_2,
     FILE_3,
     FILE_4,
+    FILE_5,
+    LIST_CONTINENT_TO_CHOOSE,
     SEPARATOR,
     VAR_CAT_BOOL,
     VAR_ELECTORAL_YEAR_CHOSEN,
@@ -60,20 +63,36 @@ class GeneratePlots:
             self.df_1_ine = pd.read_csv(DIR_DATA + FILE_1 + EXTENSION, sep=SEPARATOR)
             self.df_2_ine = pd.read_csv(DIR_DATA + FILE_2 + EXTENSION, sep=SEPARATOR)
             self.df_3_ine = pd.read_csv(DIR_DATA + FILE_3 + EXTENSION, sep=SEPARATOR)
+            self.df_4_ine = pd.read_csv(DIR_DATA + FILE_4 + EXTENSION, sep=SEPARATOR)
             self.df_elections = pd.read_csv(
-                DIR_DATA + FILE_4 + EXTENSION, sep=SEPARATOR
+                DIR_DATA + FILE_5 + EXTENSION, sep=SEPARATOR
             )
         else:
             logger.warning(f"{DIR_DATA} has not been found, please check your cwd")
             raise OSError("Path is not available")
 
-        return self.df_1_ine, self.df_2_ine, self.df_3_ine, self.df_elections
-
     def _clean_data(self, cat_bool: bool = VAR_CAT_BOOL, pv_bool: bool = VAR_PV_BOOL):
         logger.info("Cleaning data...")
-        self.df_1_ine = clean_ine_data(self.df_1_ine, cat_bool=cat_bool, pv_bool=pv_bool)
-        self.df_2_ine = clean_ine_data(self.df_2_ine, cat_bool=cat_bool, pv_bool=pv_bool)
-        self.df_3_ine = clean_ine_data(self.df_3_ine, cat_bool=cat_bool, pv_bool=pv_bool)
+        self.df_1_ine = clean_ine_data(
+            self.df_1_ine, cat_bool=cat_bool, pv_bool=pv_bool
+        )
+        self.df_2_ine = clean_ine_data(
+            self.df_2_ine, cat_bool=cat_bool, pv_bool=pv_bool
+        )
+        self.df_3_ine = clean_ine_data(
+            self.df_3_ine, cat_bool=cat_bool, pv_bool=pv_bool
+        )
+        self.df_4_ine["País de nacimiento"] = (
+            self.df_4_ine["País de nacimiento"]
+            .map(DICT_CONTINENT)
+            .fillna(self.df_4_ine["País de nacimiento"])
+        )
+        self.df_4_ine = self.df_4_ine[
+            self.df_4_ine["País de nacimiento"].isin(LIST_CONTINENT_TO_CHOOSE)
+        ]
+        self.df_4_ine = clean_ine_data(
+            self.df_4_ine, cat_bool=cat_bool, pv_bool=pv_bool
+        )
         self.df_elections = clean_election_data(self.df_elections)
 
     def _create_plot_data(self):

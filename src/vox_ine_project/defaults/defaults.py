@@ -11,7 +11,8 @@ DIR_PLOTS = "./assets/plots/"
 FILE_1 = "INE_30824"
 FILE_2 = "INE_30832"
 FILE_3 = "INE_66593"
-FILE_4 = "congreso19" if VAR_ELECTORAL_YEAR_CHOSEN == 2019 else "congreso23"
+FILE_4 = "INE_65035"
+FILE_5 = "congreso19" if VAR_ELECTORAL_YEAR_CHOSEN == 2019 else "congreso23"
 EXTENSION = ".csv"
 SEPARATOR = ";"
 
@@ -370,6 +371,30 @@ DICT_PARTY_IDEOLOGY_19 = {
     "COALICIÓN POR MELILLA": "Other",
     "CONTIGO SOMOS DEMOCRACIA": "Other",
 }
+
+DICT_CONTINENT = {
+    "España": "España",
+    "Francia": "Europa",
+    "Reino Unido": "Europa",
+    "Rumanía": "Europa",
+    "Ucrania": "Europa",
+    "Otros países de Europa": "Europa",
+    "Marruecos": "África",
+    "Otros países de África": "África",
+    "Cuba": "América",
+    "República Dominicana": "América",
+    "Argentina": "América",
+    "Bolivia": "América",
+    "Colombia": "América",
+    "Ecuador": "América",
+    "Perú": "América",
+    "Venezuela": "América",
+    "Otros países de América": "América",
+    "China": "Asia",
+    "Otros países de Asia": "Asia",
+    "Oceanía": "Oceanía",
+}
+LIST_CONTINENT_TO_CHOOSE = ["España", "África", "América"]
 
 # choose which 2023 classification scheme to use: "main_parties" or "left_right_nat"
 VAR_PARTY_IDEOLOGY_SCHEME_23 = "main_parties"

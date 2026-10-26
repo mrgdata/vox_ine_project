@@ -25,12 +25,22 @@ def clean_ine_data(
     """
     if "Distritos" not in df.columns:  # identify df_3 alternative data distribution
         df = df[df["Municipios"].notna() & df["Secciones"].notna()]
-        df = df[
-            (df["Nivel de formación alcanzado"] == "Total")
-            & (df["País de nacimiento"] != "Total")
-        ]
     else:
         df = df[df["Distritos"].notna() & df["Secciones"].notna()]
+
+    mask_formacion = (
+        df["Nivel de formación alcanzado"] == "Total"
+        if "Nivel de formación alcanzado" in df.columns
+        else pd.Series(True, index=df.index)
+    )
+
+    mask_pais_nacimiento = (
+        df["País de nacimiento"] != "Total"
+        if "País de nacimiento" in df.columns
+        else pd.Series(True, index=df.index)
+    )
+
+    df = df[mask_formacion & mask_pais_nacimiento]
 
     df.loc[df["Total"].astype(str).str.startswith(".", "nan"), "Total"] = np.nan
     df["Total"] = (
