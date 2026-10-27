@@ -123,17 +123,17 @@ DICT_EVOLUTION_PLOT_LABELS = {
     },
 }
 
-DICT_IDEOLOGY_LOGIT_LABELS = {
+DICT_IDEOLOGY_COEF_LABELS = {
     "en": {
         "xlabel": "Predictor",
-        "ylabel": "Coefficient (log-odds vs. base category)",
-        "title": "Multinomial logit coefficients by ideology (base: {base_category})",
+        "ylabel": "Coefficient (vote share percentage points)",
+        "title": "Vote share coefficients by ideology (weighted linear regression)",
         "legend_title": "Ideology",
     },
     "es": {
         "xlabel": "Predictor",
-        "ylabel": "Coeficiente (log-odds frente a la categoría base)",
-        "title": "Coeficientes del logit multinomial por ideología (base: {base_category})",
+        "ylabel": "Coeficiente (puntos porcentuales de voto)",
+        "title": "Coeficientes de intención de voto por ideología (regresión lineal ponderada)",
         "legend_title": "Ideología",
     },
 }

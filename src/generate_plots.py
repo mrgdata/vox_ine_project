@@ -14,7 +14,7 @@ from vox_ine_project.defaults.defaults import (
     DICT_EVOLUTION_PLOT_LABELS,
     DICT_HEATMAP,
     DICT_HEATMAP_LABELS,
-    DICT_IDEOLOGY_LOGIT_LABELS,
+    DICT_IDEOLOGY_COEF_LABELS,
     DIR_DATA,
     DIR_PLOTS,
     EXTENSION,
@@ -34,7 +34,7 @@ from vox_ine_project.features.features import (
     clean_ine_data,
     create_agg_data_evolution_plot,
     create_agg_data_heatmap_plot,
-    fit_ideology_logit_model,
+    fit_ideology_linear_model,
     impute_missing_data,
     merge_ine_data,
 )
@@ -66,7 +66,7 @@ class GeneratePlots:
         self._create_plot_data()
         self._evolution_plot(language=language)
         self._heatmap_plot(False, n_bins=n_bins, language=language)
-        self._ideology_logit_plot(False, language=language)
+        self._ideology_linear_plot(False, language=language)
         logger.success("Project have been performed completely!")
 
     def _load_data(self):
@@ -271,13 +271,13 @@ class GeneratePlots:
 
                 plt.close()
 
-    def _ideology_logit_plot(self, show: bool = False, language: str = VAR_LANGUAGE):
-        """Fit a multinomial logit model of each section's dominant ideology and plot it.
+    def _ideology_linear_plot(self, show: bool = False, language: str = VAR_LANGUAGE):
+        """Fit a weighted linear regression of each ideology's vote share and plot it.
 
-        The model predicts the ideology with the highest vote share in each
-        census section from "pct_ext", "pct_america", "pct_africa" and
-        "renta_neta_media_hogar". The fitted summary is logged and the
-        resulting coefficients are plotted relative to the base category.
+        One regression is fit per ideology, predicting its vote share from
+        "pct_ext", "pct_america", "pct_africa" and "renta_neta_media_hogar",
+        weighted by "population_share". The fitted summaries are logged and
+        the resulting coefficients for every ideology are plotted together.
 
         Parameters
         ----------
@@ -286,56 +286,57 @@ class GeneratePlots:
         language : str, optional
             Language used for plot labels ("en" or "es"), by default VAR_LANGUAGE.
         """
-        if language not in DICT_IDEOLOGY_LOGIT_LABELS:
+        if language not in DICT_IDEOLOGY_COEF_LABELS:
             logger.warning(
                 f"Language '{language}' is not supported, defaulting to 'en'"
             )
             language = "en"
-        text = DICT_IDEOLOGY_LOGIT_LABELS[language]
+        text = DICT_IDEOLOGY_COEF_LABELS[language]
 
-        logger.info("Fitting multinomial logit model for dominant ideology...")
+        logger.info("Fitting linear regression models for ideology vote shares...")
         ideology_cols = [
             var
             for var in DICT_HEATMAP
             if var != "population_share" and var in self.df_heatmap.columns
         ]
 
-        result, categories = fit_ideology_logit_model(self.df_heatmap, ideology_cols)
-        # statsmodels' MNLogit drops the last (highest-coded) category as base, not the first
-        base_category = categories[-1]
-        logger.info(f"Base (reference) category: {base_category}")
-        logger.info("\n" + str(result.summary()))
+        results, ideology_cols = fit_ideology_linear_model(
+            self.df_heatmap, ideology_cols
+        )
+        for ideology, result in results.items():
+            logger.info(f"\n{ideology}\n" + str(result.summary()))
 
-        category_map = {col: categories[int(col)] for col in result.params.columns}
-        params = result.params.rename(columns=category_map).drop(
-            index="const", errors="ignore"
-        )
-        pvalues = result.pvalues.rename(columns=category_map).drop(
-            index="const", errors="ignore"
-        )
+        params = pd.DataFrame(
+            {ideology: result.params for ideology, result in results.items()}
+        ).drop(index="const", errors="ignore")
+        pvalues = pd.DataFrame(
+            {ideology: result.pvalues for ideology, result in results.items()}
+        ).drop(index="const", errors="ignore")
 
         # solid color per ideology, sampled from its DICT_HEATMAP colormap
         category_colors = {
-            category: plt.get_cmap(DICT_HEATMAP[category][0])(0.65)
-            for category in params.columns
+            ideology: plt.get_cmap(DICT_HEATMAP[ideology][0])(0.65)
+            for ideology in params.columns
         }
 
         _, ax = plt.subplots(figsize=(8, 6))
-        params.plot(kind="bar", ax=ax, color=[category_colors[c] for c in params.columns])
+        params.plot(
+            kind="bar", ax=ax, color=[category_colors[c] for c in params.columns]
+        )
         ax.axhline(0, color="black", linewidth=0.8)
         ax.set_xlabel(text["xlabel"])
         ax.set_ylabel(text["ylabel"])
-        ax.set_title(text["title"].format(base_category=base_category))
+        ax.set_title(text["title"])
 
         legend_handles = [
-            Patch(facecolor=category_colors[category], label=category)
-            for category in params.columns
+            Patch(facecolor=category_colors[ideology], label=ideology)
+            for ideology in params.columns
         ]
 
         significance_level = 0.05
-        for container, category in zip(ax.containers, params.columns):
+        for container, ideology in zip(ax.containers, params.columns):
             for patch, predictor in zip(container, params.index):
-                if pvalues.loc[predictor, category] >= significance_level:
+                if pvalues.loc[predictor, ideology] >= significance_level:
                     patch.set_alpha(0.35)
 
         ax.legend(
@@ -346,7 +347,7 @@ class GeneratePlots:
         )
         plt.tight_layout()
         plt.savefig(
-            f"{DIR_PLOTS}/ideology_logit_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}.png"
+            f"{DIR_PLOTS}/ideology_vote_share_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}.png"
         )
 
         if show:

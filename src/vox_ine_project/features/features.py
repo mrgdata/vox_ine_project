@@ -402,16 +402,14 @@ def create_agg_data_heatmap_plot(
     return agg.astype("float64"), v_min, v_max
 
 
-def fit_ideology_logit_model(
+def fit_ideology_linear_model(
     df: pd.DataFrame,
     ideology_cols: list[str],
     feature_cols: list[str] = LIST_LOGIT_FEATURES,
     interaction_features: list[str] = LIST_LOGIT_INTERACTION_FEATURES,
-    base_category: str = "PSOE",
     weight_col: str | None = "population_share",
-    random_state: int = 0,
 ):
-    """Fit a multinomial logit model predicting each section's dominant ideology.
+    """Fit one weighted linear regression per ideology, predicting vote share.
 
     Parameters
     ----------
@@ -419,31 +417,22 @@ def fit_ideology_logit_model(
         Data containing `feature_cols`, `interaction_features`, `ideology_cols`
         and `weight_col`.
     ideology_cols : list[str]
-        Vote share columns, one per ideology.
+        Vote share columns, one per ideology; each gets its own independent
+        regression.
     feature_cols : list[str], optional
         Numeric predictors for the model, by default LIST_LOGIT_FEATURES.
     interaction_features : list[str], optional
         Feature columns multiplied together into a single interaction term
         added to the model, by default LIST_LOGIT_INTERACTION_FEATURES. Pass
         an empty list to disable the interaction term.
-    base_category : str, optional
-        Ideology used as the base/reference category (the one statsmodels'
-        MNLogit drops), by default "PSOE". Falls back to alphabetical
-        ordering if not found among the dominant ideologies.
     weight_col : str or None, optional
-        Column used to resample rows with replacement (same sample size),
-        approximating population-weighted fitting since statsmodels' MNLogit
-        has no native weight support, by default "population_share". Pass
-        None to disable weighting and fit on the data as-is.
-    random_state : int, optional
-        Seed for the weighted resampling, for reproducibility, by default 0.
+        Column used as the WLS observation weight, so more populous sections
+        count more, by default "population_share". Pass None for plain OLS.
 
     Returns
     -------
-    tuple[MNLogitResultsWrapper, list[str]]
-        Fitted model results and the ideology categories (the last one is
-        the base/reference category, since statsmodels' MNLogit drops the
-        highest-coded category as base rather than the first).
+    tuple[dict[str, RegressionResultsWrapper], list[str]]
+        Fitted WLS/OLS result per ideology, and the ideology column names.
     """
     required_cols = list(
         dict.fromkeys(
@@ -455,26 +444,8 @@ def fit_ideology_logit_model(
     )
     df = df[required_cols].dropna()
 
-    if weight_col:
-        df = df.sample(
-            n=len(df), replace=True, weights=weight_col, random_state=random_state
-        )
-
     for col in dict.fromkeys(feature_cols + interaction_features):
         df[col] = _normalize_variable(df[col])
-
-    dominant_ideology = df[ideology_cols].idxmax(axis=1)
-    categories = sorted(dominant_ideology.unique())
-    if base_category in categories:
-        categories.remove(base_category)
-        categories.append(base_category)
-    else:
-        logger.warning(
-            f"base_category {base_category!r} not found among dominant ideologies, "
-            "defaulting to alphabetical ordering"
-        )
-    y_cat = pd.Categorical(dominant_ideology, categories=categories)
-    y = pd.Series(y_cat.codes, index=df.index)
 
     model_feature_cols = list(feature_cols)
     if interaction_features:
@@ -484,10 +455,13 @@ def fit_ideology_logit_model(
 
     x = sm.add_constant(df[model_feature_cols])
 
-    model = sm.MNLogit(y, x)
-    result = model.fit(disp=False)
+    results = {}
+    for ideology in ideology_cols:
+        y = df[ideology]
+        model = sm.WLS(y, x, weights=df[weight_col]) if weight_col else sm.OLS(y, x)
+        results[ideology] = model.fit()
 
-    return result, list(y_cat.categories)
+    return results, ideology_cols
 
 
 def _normalize_variable(
