@@ -31,7 +31,7 @@ DICT_DISTRIBUTION_INCOME = {
     "quantile": 25,
     "centile": 100,
 }
-
+"ti"
 DICT_HEATMAP = {
     "PP": ["Blues", {"en": "Popular Party", "es": "Partido Popular"}],
     "Right": [
@@ -113,9 +113,9 @@ DICT_EVOLUTION_PLOT_LABELS = {
         "legend_label": "Overall Δ foreign born population",
     },
     "es": {
-        "xlabel": "Renta neta media del hogar ({dist_value}, base 2023)",
+        "xlabel": "Renta neta media del hogar ({dist_value}s, base 2023)",
         "ylabel": "Δ población nacida en el extranjero (2023 − 2021)",
-        "title": "Cambio en la población nacida en el extranjero por {dist_value} de renta del hogar de las secciones censales",
+        "title": "Cambio en la población nacida en el extranjero por {dist_value}s de renta del hogar de las secciones censales",
         "legend_label": "Δ global de población nacida en el extranjero",
     },
 }

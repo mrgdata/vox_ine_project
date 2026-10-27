@@ -118,9 +118,7 @@ class GeneratePlots:
     def _create_plot_data(self):
         """Merge the cleaned dataframes, impute missing values and build plot inputs."""
         logger.info("Merging and creating new data...")
-        self.df_ine_raw = merge_ine_data(
-            self.df_1_ine, self.df_2_ine, self.df_4_ine
-        )
+        self.df_ine_raw = merge_ine_data(self.df_1_ine, self.df_2_ine, self.df_4_ine)
         self.df_ine = impute_missing_data(self.df_ine_raw)
         self.df_heatmap = self.df_elections.merge(
             self.df_ine[self.df_ine["Periodo"] == VAR_ELECTORAL_YEAR_CHOSEN].copy(),

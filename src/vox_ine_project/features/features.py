@@ -6,8 +6,8 @@ from loguru import logger
 from vox_ine_project.defaults.defaults import (
     DICT_DISTRIBUTION_INCOME,
     DICT_PARTY_IDEOLOGY,
-    LIST_LOGIT_FEATURES,
     LIST_CONTINENT_TO_CHOOSE,
+    LIST_LOGIT_FEATURES,
     TUPLE_CAT_PROVINCES,
     TUPLE_PV_PROVINCES,
     VAR_CAT_BOOL,
@@ -60,14 +60,20 @@ def clean_ine_data(
     df = df[mask_formacion & mask_sexo & mask_pais_nacimiento]
 
     df.loc[df["Total"].astype(str).str.startswith(".", "nan"), "Total"] = np.nan
-    total_str = df["Total"].astype(str)
-    # "." is a thousands separator only when a "," decimal separator is also present
-    has_comma = total_str.str.contains(",", regex=False)
-    df["Total"] = (
-        total_str.where(~has_comma, total_str.str.replace(".", "", regex=False))
-        .str.replace(",", ".", regex=False)
-        .astype(float)
-    )
+    total_str = df["Total"].astype("string").str.strip()
+
+    # Missing values and invalid leading separators
+    invalid = total_str.isna() | total_str.str.startswith(r"\.", na=False)
+    total_str = total_str.mask(invalid)
+
+    # Remove thousands separators, then convert decimal commas to dots.
+    # Examples: "1,00" -> "1.00", "1.000" -> "1000",
+    #           "1.000,00" -> "1000.00", "1.00" -> "1.00"
+    total_str = total_str.str.replace(
+        r"(?<=\d)\.(?=\d{3}(?:,|$))", "", regex=True
+    ).str.replace(",", ".", regex=False)
+
+    df["Total"] = pd.to_numeric(total_str, errors="coerce").astype("float64")
     df["key_seccion"] = df["Secciones"].str[:10]
 
     # passed explicitly from generate_plots instead of read from defaults
@@ -169,7 +175,7 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df4: pd.DataFrame):
         .merge(
             df4[df4["País de nacimiento_desagregado"].isin(LIST_CONTINENT_TO_CHOOSE)]
             .groupby(["key_seccion", "Periodo", "País de nacimiento_desagregado"])
-            .agg({"Total": sum})
+            .agg({"Total": "sum"})
             .reset_index()
             .pivot(
                 index=["key_seccion", "Periodo"],
@@ -186,7 +192,11 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df4: pd.DataFrame):
     pais_nacimiento = (
         df4.groupby(["key_seccion", "Periodo", "País de nacimiento"], as_index=False)
         .agg({"Total": "sum"})
-        .pivot(index=["key_seccion", "Periodo"], columns="País de nacimiento", values="Total")
+        .pivot(
+            index=["key_seccion", "Periodo"],
+            columns="País de nacimiento",
+            values="Total",
+        )
     )
     pais_nacimiento["Extranjero"] = pais_nacimiento.drop(
         columns="España", errors="ignore"
@@ -253,10 +263,13 @@ def impute_missing_data(df: pd.DataFrame):
         df_year = df_year[df_year["Población"].notna()]
         for col in df_year.columns:
             if df_year[col].isna().sum() > 0:
+                df_year[col] = df_year[col].astype("Float64")
+                municipios_average = df_year.groupby("Municipios")[col].transform(
+                    "mean"
+                )
+                total_average = round(df_year[col].mean(), 0)
                 df_year[col] = (
-                    df_year[col]
-                    .fillna(df_year.groupby("Municipios")[col].transform("mean"))
-                    .fillna(round(df_year[col].mean(), 0))
+                    df_year[col].fillna(municipios_average).fillna(total_average)
                 )
         logger.info(f"NaNs summary for {year}")
         print(df_year.isna().sum())
@@ -300,8 +313,12 @@ def create_agg_data_evolution_plot(
     df_23 = df[df["Periodo"] == 2023].copy()
     df_21 = df[df["Periodo"] == 2021].copy()
 
-    df_23["migrants"] = df_23["Población"] * (df_23["pct_ext"] / 100)
-    df_21["migrants"] = df_21["Población"] * (df_21["pct_ext"] / 100)
+    df_23["migrants"] = (df_23["Población"] * (df_23["pct_ext"] / 100)).astype(
+        "float64"
+    )
+    df_21["migrants"] = (df_21["Población"] * (df_21["pct_ext"] / 100)).astype(
+        "float64"
+    )
 
     df_23[f"income_{default_distribution}"] = pd.qcut(
         df_23["renta_neta_media_hogar"], q=default_dist_value, labels=False
@@ -381,7 +398,7 @@ def create_agg_data_heatmap_plot(
         v_min = np.nanpercentile(agg.values, 10)
         v_max = np.nanpercentile(agg.values, 90)
 
-    return agg, v_min, v_max
+    return agg.astype("float64"), v_min, v_max
 
 
 def fit_ideology_logit_model(
@@ -444,11 +461,11 @@ def _normalize_variable(
     pd.Series
         Normalized variable, preserving the original index.
     """
-    series = pd.to_numeric(series, errors="coerce")
+    series = series.astype("float64")
 
     if method == "zscore":
         std = series.std()
-        if std == 0 or pd.isna(std):
+        if pd.isna(std) or std == 0:
             return pd.Series(0.0, index=series.index).where(series.notna())
         return (series - series.mean()) / std
 
