@@ -44,17 +44,24 @@ def clean_ine_data(
         else pd.Series(True, index=df.index)
     )
 
+    mask_sexo = (
+        df["Sexo"] == "Total"
+        if "Sexo" in df.columns
+        else pd.Series(True, index=df.index)
+    )
+
     mask_pais_nacimiento = (
         df["País de nacimiento"] != "Total"
         if "País de nacimiento" in df.columns
         else pd.Series(True, index=df.index)
     )
 
-    df = df[mask_formacion & mask_pais_nacimiento]
+    df = df[mask_formacion & mask_sexo & mask_pais_nacimiento]
 
     df.loc[df["Total"].astype(str).str.startswith(".", "nan"), "Total"] = np.nan
     df["Total"] = (
         df["Total"]
+        .astype(str)
         .str.replace(".", "", regex=False)
         .str.replace(",", ".", regex=False)
         .astype(float)
@@ -112,7 +119,9 @@ def clean_election_data(df: pd.DataFrame):
     return df
 
 
-def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame, df4: pd.DataFrame):
+def merge_ine_data(
+    df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame, df4: pd.DataFrame
+):
     """Merge the four cleaned INE dataframes and derive the analysis variables.
 
     Parameters
@@ -167,7 +176,10 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame, df4:
             right_index=True,
         )
         .merge(
-            df4.pivot(
+            df4.groupby(["key_seccion", "Periodo", "País de nacimiento_desagregado"])
+            .agg({"Total": sum})
+            .reset_index()
+            .pivot(
                 index=["key_seccion", "Periodo"],
                 columns="País de nacimiento_desagregado",
                 values="Total",
@@ -389,6 +401,9 @@ def fit_ideology_logit_model(
     """
     df = df[feature_cols + ideology_cols].dropna()
 
+    for col in feature_cols:
+        df[col] = _normalize_variable(df[col])
+
     dominant_ideology = df[ideology_cols].idxmax(axis=1)
     y_cat = pd.Categorical(dominant_ideology)
     y = pd.Series(y_cat.codes, index=df.index)
@@ -400,3 +415,45 @@ def fit_ideology_logit_model(
 
     return result, list(y_cat.categories)
 
+
+import pandas as pd
+
+
+def _normalize_variable(
+    series: pd.Series,
+    method: str = "zscore",
+) -> pd.Series:
+    """
+    Normalize a numerical variable.
+
+    Parameters
+    ----------
+    series : pd.Series
+        Variable to normalize.
+    method : str
+        'zscore' : mean 0, standard deviation 1.
+        'minmax' : rescales values to [0, 1].
+
+    Returns
+    -------
+    pd.Series
+        Normalized variable, preserving the original index.
+    """
+    series = pd.to_numeric(series, errors="coerce")
+
+    if method == "zscore":
+        std = series.std()
+        if std == 0 or pd.isna(std):
+            return pd.Series(0.0, index=series.index).where(series.notna())
+        return (series - series.mean()) / std
+
+    elif method == "minmax":
+        min_val = series.min()
+        max_val = series.max()
+
+        if max_val == min_val or pd.isna(min_val):
+            return pd.Series(0.0, index=series.index).where(series.notna())
+        return (series - min_val) / (max_val - min_val)
+
+    else:
+        raise ValueError(f"Unknown method: {method!r}. Use 'zscore' or 'minmax'.")

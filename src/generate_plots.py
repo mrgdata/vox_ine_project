@@ -109,24 +109,27 @@ class GeneratePlots:
         self.df_3_ine = clean_ine_data(
             self.df_3_ine, cat_bool=cat_bool, pv_bool=pv_bool
         )
-        self.df_4_ine["País de nacimiento"] = (
+        self.df_4_ine = clean_ine_data(
+            self.df_4_ine, cat_bool=cat_bool, pv_bool=pv_bool
+        )
+        self.df_4_ine["País de nacimiento_desagregado"] = (
             self.df_4_ine["País de nacimiento"]
             .map(DICT_CONTINENT)
             .fillna(self.df_4_ine["País de nacimiento"])
         )
         self.df_4_ine = self.df_4_ine[
-            self.df_4_ine["País de nacimiento"].isin(LIST_CONTINENT_TO_CHOOSE)
+            self.df_4_ine["País de nacimiento_desagregado"].isin(
+                LIST_CONTINENT_TO_CHOOSE
+            )
         ]
-        self.df_4_ine = clean_ine_data(
-            self.df_4_ine, cat_bool=cat_bool, pv_bool=pv_bool
-        )
-        self.df_4_ine.rename(columns={"País de nacimiento": "País de nacimiento_desagregado"}, inplace=True)
         self.df_elections = clean_election_data(self.df_elections)
 
     def _create_plot_data(self):
         """Merge the cleaned dataframes, impute missing values and build plot inputs."""
         logger.info("Merging and creating new data...")
-        self.df_ine_raw = merge_ine_data(self.df_1_ine, self.df_2_ine, self.df_3_ine, self.df_4_ine)
+        self.df_ine_raw = merge_ine_data(
+            self.df_1_ine, self.df_2_ine, self.df_3_ine, self.df_4_ine
+        )
         self.df_ine = impute_missing_data(self.df_ine_raw)
         self.df_heatmap = self.df_elections.merge(
             self.df_ine[self.df_ine["Periodo"] == VAR_ELECTORAL_YEAR_CHOSEN].copy(),
@@ -234,7 +237,9 @@ class GeneratePlots:
                 ax.set_xticklabels(labels)
                 ax.set_yticklabels(labels)
 
-                ax.set_xlabel(text["xlabel"].format(bin_name=bin_name, demo_label=demo_label))
+                ax.set_xlabel(
+                    text["xlabel"].format(bin_name=bin_name, demo_label=demo_label)
+                )
                 ax.set_ylabel(text["ylabel"].format(bin_name=bin_name))
                 ax.set_title(
                     text["title"].format(var_label=var_label, demo_label=demo_label)
@@ -251,7 +256,12 @@ class GeneratePlots:
                             val = df_agg.iloc[i, j]
                             if not np.isnan(val):
                                 ax.text(
-                                    j, i, f"{val:.1f}", ha="center", va="center", fontsize=8
+                                    j,
+                                    i,
+                                    f"{val:.1f}",
+                                    ha="center",
+                                    va="center",
+                                    fontsize=8,
                                 )
 
                 plt.tight_layout()
@@ -302,13 +312,16 @@ class GeneratePlots:
         ax.axhline(0, color="black", linewidth=0.8)
         ax.set_xlabel("Predictor")
         ax.set_ylabel("Coefficient (log-odds vs. base category)")
-        ax.set_title(f"Multinomial logit coefficients by ideology (base: {base_category})")
+        ax.set_title(
+            f"Multinomial logit coefficients by ideology (base: {base_category})"
+        )
         ax.legend(title="Ideology", bbox_to_anchor=(1.02, 1), loc="upper left")
         plt.tight_layout()
-        plt.savefig(f"{DIR_PLOTS}/ideology_logit_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}.png")
+        plt.savefig(
+            f"{DIR_PLOTS}/ideology_logit_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}.png"
+        )
 
         if show:
             plt.show()
 
         plt.close()
-

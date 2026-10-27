@@ -4,7 +4,13 @@ VAR_ELECTORAL_YEAR_CHOSEN = 2023
 VAR_LANGUAGE = "en"  # "en" or "es"
 
 # predictors used in the multinomial logit model of dominant ideology
-LIST_LOGIT_FEATURES = ["pct_ext", "pct_america", "pct_africa", "renta_neta_media_hogar"]
+LIST_LOGIT_FEATURES = [
+    "pct_ext",
+    "pct_america",
+    "pct_africa",
+    "renta_neta_media_hogar",
+    "population_share",
+]
 
 TUPLE_CAT_PROVINCES = ("08", "17", "25", "43")
 TUPLE_PV_PROVINCES = ("01", "20", "48")
@@ -411,7 +417,7 @@ DICT_CONTINENT = {
     "Otros países de Asia": "Asia",
     "Oceanía": "Oceanía",
 }
-LIST_CONTINENT_TO_CHOOSE = ["España", "África", "América"]
+LIST_CONTINENT_TO_CHOOSE = ["África", "América"]
 
 # choose which 2023 classification scheme to use: "main_parties" or "left_right_nat"
 VAR_PARTY_IDEOLOGY_SCHEME_23 = "main_parties"
