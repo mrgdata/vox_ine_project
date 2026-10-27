@@ -8,6 +8,7 @@ from vox_ine_project.defaults.defaults import (
     DICT_PARTY_IDEOLOGY,
     LIST_CONTINENT_TO_CHOOSE,
     LIST_LOGIT_FEATURES,
+    LIST_LOGIT_INTERACTION_FEATURES,
     TUPLE_CAT_PROVINCES,
     TUPLE_PV_PROVINCES,
     VAR_CAT_BOOL,
@@ -405,17 +406,22 @@ def fit_ideology_logit_model(
     df: pd.DataFrame,
     ideology_cols: list[str],
     feature_cols: list[str] = LIST_LOGIT_FEATURES,
+    interaction_features: list[str] = LIST_LOGIT_INTERACTION_FEATURES,
 ):
     """Fit a multinomial logit model predicting each section's dominant ideology.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Data containing `feature_cols` and `ideology_cols`.
+        Data containing `feature_cols`, `interaction_features` and `ideology_cols`.
     ideology_cols : list[str]
         Vote share columns, one per ideology.
     feature_cols : list[str], optional
         Numeric predictors for the model, by default LIST_LOGIT_FEATURES.
+    interaction_features : list[str], optional
+        Feature columns multiplied together into a single interaction term
+        added to the model, by default LIST_LOGIT_INTERACTION_FEATURES. Pass
+        an empty list to disable the interaction term.
 
     Returns
     -------
@@ -424,16 +430,25 @@ def fit_ideology_logit_model(
         the base/reference category, since statsmodels' MNLogit drops the
         highest-coded category as base rather than the first).
     """
-    df = df[feature_cols + ideology_cols].dropna()
+    required_cols = list(
+        dict.fromkeys(feature_cols + interaction_features + ideology_cols)
+    )
+    df = df[required_cols].dropna()
 
-    for col in feature_cols:
+    for col in dict.fromkeys(feature_cols + interaction_features):
         df[col] = _normalize_variable(df[col])
 
     dominant_ideology = df[ideology_cols].idxmax(axis=1)
     y_cat = pd.Categorical(dominant_ideology)
     y = pd.Series(y_cat.codes, index=df.index)
 
-    x = sm.add_constant(df[feature_cols])
+    model_feature_cols = list(feature_cols)
+    if interaction_features:
+        interaction_name = ":".join(interaction_features)
+        df[interaction_name] = df[interaction_features].prod(axis=1)
+        model_feature_cols.append(interaction_name)
+
+    x = sm.add_constant(df[model_feature_cols])
 
     model = sm.MNLogit(y, x)
     result = model.fit(disp=False)

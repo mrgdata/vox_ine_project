@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from matplotlib import pyplot as plt
+from matplotlib.patches import Patch
 
 from vox_ine_project.defaults.defaults import (
     DICT_BIN_NAME_DEFAULT,
@@ -305,9 +306,13 @@ class GeneratePlots:
         logger.info(f"Base (reference) category: {base_category}")
         logger.info("\n" + str(result.summary()))
 
-        params = result.params.copy()
-        params.columns = [categories[int(col)] for col in params.columns]
-        params = params.drop(index="const", errors="ignore")
+        category_map = {col: categories[int(col)] for col in result.params.columns}
+        params = result.params.rename(columns=category_map).drop(
+            index="const", errors="ignore"
+        )
+        pvalues = result.pvalues.rename(columns=category_map).drop(
+            index="const", errors="ignore"
+        )
 
         _, ax = plt.subplots(figsize=(8, 6))
         params.plot(kind="bar", ax=ax)
@@ -315,8 +320,24 @@ class GeneratePlots:
         ax.set_xlabel(text["xlabel"])
         ax.set_ylabel(text["ylabel"])
         ax.set_title(text["title"].format(base_category=base_category))
+
+        # build solid-color legend swatches before dimming non-significant bars
+        legend_handles = [
+            Patch(facecolor=container.patches[0].get_facecolor(), label=category)
+            for container, category in zip(ax.containers, params.columns)
+        ]
+
+        significance_level = 0.05
+        for container, category in zip(ax.containers, params.columns):
+            for patch, predictor in zip(container, params.index):
+                if pvalues.loc[predictor, category] >= significance_level:
+                    patch.set_alpha(0.35)
+
         ax.legend(
-            title=text["legend_title"], bbox_to_anchor=(1.02, 1), loc="upper left"
+            handles=legend_handles,
+            title=text["legend_title"],
+            bbox_to_anchor=(1.02, 1),
+            loc="upper left",
         )
         plt.tight_layout()
         plt.savefig(

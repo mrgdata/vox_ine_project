@@ -11,6 +11,10 @@ LIST_LOGIT_FEATURES = [
     "renta_neta_media_hogar",
     "population_share",
 ]
+LIST_LOGIT_INTERACTION_FEATURES = [
+    "renta_neta_media_hogar",
+    "pct_ext",
+]
 
 TUPLE_CAT_PROVINCES = ("08", "17", "25", "43")
 TUPLE_PV_PROVINCES = ("01", "20", "48")
