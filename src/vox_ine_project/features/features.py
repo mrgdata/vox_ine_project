@@ -7,6 +7,7 @@ from vox_ine_project.defaults.defaults import (
     DICT_DISTRIBUTION_INCOME,
     DICT_PARTY_IDEOLOGY,
     LIST_LOGIT_FEATURES,
+    LIST_CONTINENT_TO_CHOOSE,
     TUPLE_CAT_PROVINCES,
     TUPLE_PV_PROVINCES,
     VAR_CAT_BOOL,
@@ -59,10 +60,11 @@ def clean_ine_data(
     df = df[mask_formacion & mask_sexo & mask_pais_nacimiento]
 
     df.loc[df["Total"].astype(str).str.startswith(".", "nan"), "Total"] = np.nan
+    total_str = df["Total"].astype(str)
+    # "." is a thousands separator only when a "," decimal separator is also present
+    has_comma = total_str.str.contains(",", regex=False)
     df["Total"] = (
-        df["Total"]
-        .astype(str)
-        .str.replace(".", "", regex=False)
+        total_str.where(~has_comma, total_str.str.replace(".", "", regex=False))
         .str.replace(",", ".", regex=False)
         .astype(float)
     )
@@ -119,10 +121,8 @@ def clean_election_data(df: pd.DataFrame):
     return df
 
 
-def merge_ine_data(
-    df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame, df4: pd.DataFrame
-):
-    """Merge the four cleaned INE dataframes and derive the analysis variables.
+def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df4: pd.DataFrame):
+    """Merge the cleaned INE dataframes and derive the analysis variables.
 
     Parameters
     ----------
@@ -130,10 +130,10 @@ def merge_ine_data(
         Cleaned income indicators dataframe.
     df2 : pd.DataFrame
         Cleaned demographic indicators dataframe.
-    df3 : pd.DataFrame
-        Cleaned birth country (continent) indicators dataframe.
     df4 : pd.DataFrame
-        Cleaned disaggregated birth country indicators dataframe.
+        Cleaned disaggregated birth country indicators dataframe, containing
+        both "País de nacimiento" (raw country) and "País de nacimiento_desagregado"
+        (continent) columns.
 
     Returns
     -------
@@ -167,16 +167,8 @@ def merge_ine_data(
             right_index=True,
         )
         .merge(
-            df3.pivot(
-                index=["key_seccion", "Periodo"],
-                columns="País de nacimiento",
-                values="Total",
-            ),
-            left_index=True,
-            right_index=True,
-        )
-        .merge(
-            df4.groupby(["key_seccion", "Periodo", "País de nacimiento_desagregado"])
+            df4[df4["País de nacimiento_desagregado"].isin(LIST_CONTINENT_TO_CHOOSE)]
+            .groupby(["key_seccion", "Periodo", "País de nacimiento_desagregado"])
             .agg({"Total": sum})
             .reset_index()
             .pivot(
@@ -188,6 +180,21 @@ def merge_ine_data(
             right_index=True,
         )
         .reset_index()
+    )
+
+    # "España"/"Extranjero" totals derived from df4's raw (non-continent) "País de nacimiento" column
+    pais_nacimiento = (
+        df4.groupby(["key_seccion", "Periodo", "País de nacimiento"], as_index=False)
+        .agg({"Total": "sum"})
+        .pivot(index=["key_seccion", "Periodo"], columns="País de nacimiento", values="Total")
+    )
+    pais_nacimiento["Extranjero"] = pais_nacimiento.drop(
+        columns="España", errors="ignore"
+    ).sum(axis=1)
+    df = df.merge(
+        pais_nacimiento[["España", "Extranjero"]].reset_index(),
+        on=["key_seccion", "Periodo"],
+        how="inner",
     )
 
     # check basic columns to assure merging is done correctly
@@ -396,8 +403,9 @@ def fit_ideology_logit_model(
     Returns
     -------
     tuple[MNLogitResultsWrapper, list[str]]
-        Fitted model results and the ideology categories (the first one is
-        the base/reference category).
+        Fitted model results and the ideology categories (the last one is
+        the base/reference category, since statsmodels' MNLogit drops the
+        highest-coded category as base rather than the first).
     """
     df = df[feature_cols + ideology_cols].dropna()
 
@@ -414,9 +422,6 @@ def fit_ideology_logit_model(
     result = model.fit(disp=False)
 
     return result, list(y_cat.categories)
-
-
-import pandas as pd
 
 
 def _normalize_variable(

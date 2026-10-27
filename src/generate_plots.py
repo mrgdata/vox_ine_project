@@ -10,17 +10,17 @@ from vox_ine_project.defaults.defaults import (
     DICT_BIN_NAMES,
     DICT_CONTINENT,
     DICT_DEMO_VAR_LABELS,
+    DICT_EVOLUTION_PLOT_LABELS,
     DICT_HEATMAP,
     DICT_HEATMAP_LABELS,
+    DICT_IDEOLOGY_LOGIT_LABELS,
     DIR_DATA,
     DIR_PLOTS,
     EXTENSION,
     FILE_1,
     FILE_2,
-    FILE_3,
     FILE_4,
     FILE_5,
-    LIST_CONTINENT_TO_CHOOSE,
     LIST_HEATMAP_DEMO_VARS,
     SEPARATOR,
     VAR_CAT_BOOL,
@@ -63,7 +63,7 @@ class GeneratePlots:
         self._load_data()
         self._clean_data(cat_bool=cat_bool, pv_bool=pv_bool)
         self._create_plot_data()
-        self._evolution_plot()
+        self._evolution_plot(language=language)
         self._heatmap_plot(False, n_bins=n_bins, language=language)
         self._ideology_logit_plot(False, language=language)
         logger.success("Project have been performed completely!")
@@ -80,7 +80,6 @@ class GeneratePlots:
         if os.path.exists(DIR_DATA):
             self.df_1_ine = pd.read_csv(DIR_DATA + FILE_1 + EXTENSION, sep=SEPARATOR)
             self.df_2_ine = pd.read_csv(DIR_DATA + FILE_2 + EXTENSION, sep=SEPARATOR)
-            self.df_3_ine = pd.read_csv(DIR_DATA + FILE_3 + EXTENSION, sep=SEPARATOR)
             self.df_4_ine = pd.read_csv(DIR_DATA + FILE_4 + EXTENSION, sep=SEPARATOR)
             self.df_elections = pd.read_csv(
                 DIR_DATA + FILE_5 + EXTENSION, sep=SEPARATOR
@@ -106,9 +105,6 @@ class GeneratePlots:
         self.df_2_ine = clean_ine_data(
             self.df_2_ine, cat_bool=cat_bool, pv_bool=pv_bool
         )
-        self.df_3_ine = clean_ine_data(
-            self.df_3_ine, cat_bool=cat_bool, pv_bool=pv_bool
-        )
         self.df_4_ine = clean_ine_data(
             self.df_4_ine, cat_bool=cat_bool, pv_bool=pv_bool
         )
@@ -117,18 +113,13 @@ class GeneratePlots:
             .map(DICT_CONTINENT)
             .fillna(self.df_4_ine["País de nacimiento"])
         )
-        self.df_4_ine = self.df_4_ine[
-            self.df_4_ine["País de nacimiento_desagregado"].isin(
-                LIST_CONTINENT_TO_CHOOSE
-            )
-        ]
         self.df_elections = clean_election_data(self.df_elections)
 
     def _create_plot_data(self):
         """Merge the cleaned dataframes, impute missing values and build plot inputs."""
         logger.info("Merging and creating new data...")
         self.df_ine_raw = merge_ine_data(
-            self.df_1_ine, self.df_2_ine, self.df_3_ine, self.df_4_ine
+            self.df_1_ine, self.df_2_ine, self.df_4_ine
         )
         self.df_ine = impute_missing_data(self.df_ine_raw)
         self.df_heatmap = self.df_elections.merge(
@@ -142,14 +133,23 @@ class GeneratePlots:
             self.dist_value,
         ) = create_agg_data_evolution_plot(self.df_ine)
 
-    def _evolution_plot(self, show: bool = False):
+    def _evolution_plot(self, show: bool = False, language: str = VAR_LANGUAGE):
         """Plot the change in foreign born population by household income bucket.
 
         Parameters
         ----------
         show : bool, optional
             If True, display the plot interactively, by default False.
+        language : str, optional
+            Language used for plot labels ("en" or "es"), by default VAR_LANGUAGE.
         """
+        if language not in DICT_EVOLUTION_PLOT_LABELS:
+            logger.warning(
+                f"Language '{language}' is not supported, defaulting to 'en'"
+            )
+            language = "en"
+        text = DICT_EVOLUTION_PLOT_LABELS[language]
+
         logger.info("Creating and saving plots...")
         plt.figure(figsize=(9, 5))
 
@@ -163,14 +163,12 @@ class GeneratePlots:
             linestyle="--",
             linewidth=1,
             color="black",
-            label="Overall Δ foreign born population",
+            label=text["legend_label"],
         )
 
-        plt.xlabel(f"Household net income {self.dist_value} (2023-based)")
-        plt.ylabel("Δ foreign born population (2023 − 2021)")
-        plt.title(
-            f"Change in foreign born population population by household income {self.dist_value} of census sections"
-        )
+        plt.xlabel(text["xlabel"].format(dist_value=self.dist_value))
+        plt.ylabel(text["ylabel"])
+        plt.title(text["title"].format(dist_value=self.dist_value))
 
         plt.savefig(DIR_PLOTS + "evolution_plot.png")
         if show:
@@ -287,10 +285,15 @@ class GeneratePlots:
         show : bool, optional
             If True, display the plot interactively, by default False.
         language : str, optional
-            Reserved for consistency with the other plot methods; currently
-            unused since coefficient labels are not yet localized, by default
-            VAR_LANGUAGE.
+            Language used for plot labels ("en" or "es"), by default VAR_LANGUAGE.
         """
+        if language not in DICT_IDEOLOGY_LOGIT_LABELS:
+            logger.warning(
+                f"Language '{language}' is not supported, defaulting to 'en'"
+            )
+            language = "en"
+        text = DICT_IDEOLOGY_LOGIT_LABELS[language]
+
         logger.info("Fitting multinomial logit model for dominant ideology...")
         ideology_cols = [
             var
@@ -299,7 +302,8 @@ class GeneratePlots:
         ]
 
         result, categories = fit_ideology_logit_model(self.df_heatmap, ideology_cols)
-        base_category = categories[0]
+        # statsmodels' MNLogit drops the last (highest-coded) category as base, not the first
+        base_category = categories[-1]
         logger.info(f"Base (reference) category: {base_category}")
         logger.info("\n" + str(result.summary()))
 
@@ -310,12 +314,12 @@ class GeneratePlots:
         _, ax = plt.subplots(figsize=(8, 6))
         params.plot(kind="bar", ax=ax)
         ax.axhline(0, color="black", linewidth=0.8)
-        ax.set_xlabel("Predictor")
-        ax.set_ylabel("Coefficient (log-odds vs. base category)")
-        ax.set_title(
-            f"Multinomial logit coefficients by ideology (base: {base_category})"
+        ax.set_xlabel(text["xlabel"])
+        ax.set_ylabel(text["ylabel"])
+        ax.set_title(text["title"].format(base_category=base_category))
+        ax.legend(
+            title=text["legend_title"], bbox_to_anchor=(1.02, 1), loc="upper left"
         )
-        ax.legend(title="Ideology", bbox_to_anchor=(1.02, 1), loc="upper left")
         plt.tight_layout()
         plt.savefig(
             f"{DIR_PLOTS}/ideology_logit_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}.png"

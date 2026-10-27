@@ -19,7 +19,7 @@ DIR_DATA = "./assets/data/"
 DIR_PLOTS = "./assets/plots/"
 FILE_1 = "INE_30824"
 FILE_2 = "INE_30832"
-FILE_3 = "INE_66593"
+# FILE_3 = "INE_66593"  # deprecated: "pct_ext"/"Extranjero" now derived from df_4_ine
 FILE_4 = "INE_65035"
 FILE_5 = "congreso19" if VAR_ELECTORAL_YEAR_CHOSEN == 2019 else "congreso23"
 EXTENSION = ".csv"
@@ -102,6 +102,36 @@ DICT_HEATMAP_LABELS = {
         "ylabel": "Renta Neta Media del Hogar ({bin_name}s)",
         "title": "{var_label} por Renta × {demo_label}",
         "cbar_label": "{var_label}",
+    },
+}
+
+DICT_EVOLUTION_PLOT_LABELS = {
+    "en": {
+        "xlabel": "Household net income {dist_value} (2023-based)",
+        "ylabel": "Δ foreign born population (2023 − 2021)",
+        "title": "Change in foreign born population by household income {dist_value} of census sections",
+        "legend_label": "Overall Δ foreign born population",
+    },
+    "es": {
+        "xlabel": "Renta neta media del hogar ({dist_value}, base 2023)",
+        "ylabel": "Δ población nacida en el extranjero (2023 − 2021)",
+        "title": "Cambio en la población nacida en el extranjero por {dist_value} de renta del hogar de las secciones censales",
+        "legend_label": "Δ global de población nacida en el extranjero",
+    },
+}
+
+DICT_IDEOLOGY_LOGIT_LABELS = {
+    "en": {
+        "xlabel": "Predictor",
+        "ylabel": "Coefficient (log-odds vs. base category)",
+        "title": "Multinomial logit coefficients by ideology (base: {base_category})",
+        "legend_title": "Ideology",
+    },
+    "es": {
+        "xlabel": "Predictor",
+        "ylabel": "Coeficiente (log-odds frente a la categoría base)",
+        "title": "Coeficientes del logit multinomial por ideología (base: {base_category})",
+        "legend_title": "Ideología",
     },
 }
 
