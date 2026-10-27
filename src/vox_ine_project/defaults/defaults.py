@@ -9,7 +9,6 @@ LIST_LOGIT_FEATURES = [
     "pct_america",
     "pct_africa",
     "renta_neta_media_hogar",
-    "population_share",
 ]
 LIST_LOGIT_INTERACTION_FEATURES = [
     "renta_neta_media_hogar",

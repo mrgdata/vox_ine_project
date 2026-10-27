@@ -407,13 +407,16 @@ def fit_ideology_logit_model(
     ideology_cols: list[str],
     feature_cols: list[str] = LIST_LOGIT_FEATURES,
     interaction_features: list[str] = LIST_LOGIT_INTERACTION_FEATURES,
+    weight_col: str | None = "population_share",
+    random_state: int = 0,
 ):
     """Fit a multinomial logit model predicting each section's dominant ideology.
 
     Parameters
     ----------
     df : pd.DataFrame
-        Data containing `feature_cols`, `interaction_features` and `ideology_cols`.
+        Data containing `feature_cols`, `interaction_features`, `ideology_cols`
+        and `weight_col`.
     ideology_cols : list[str]
         Vote share columns, one per ideology.
     feature_cols : list[str], optional
@@ -422,6 +425,13 @@ def fit_ideology_logit_model(
         Feature columns multiplied together into a single interaction term
         added to the model, by default LIST_LOGIT_INTERACTION_FEATURES. Pass
         an empty list to disable the interaction term.
+    weight_col : str or None, optional
+        Column used to resample rows with replacement (same sample size),
+        approximating population-weighted fitting since statsmodels' MNLogit
+        has no native weight support, by default "population_share". Pass
+        None to disable weighting and fit on the data as-is.
+    random_state : int, optional
+        Seed for the weighted resampling, for reproducibility, by default 0.
 
     Returns
     -------
@@ -431,9 +441,19 @@ def fit_ideology_logit_model(
         highest-coded category as base rather than the first).
     """
     required_cols = list(
-        dict.fromkeys(feature_cols + interaction_features + ideology_cols)
+        dict.fromkeys(
+            feature_cols
+            + interaction_features
+            + ideology_cols
+            + ([weight_col] if weight_col else [])
+        )
     )
     df = df[required_cols].dropna()
+
+    if weight_col:
+        df = df.sample(
+            n=len(df), replace=True, weights=weight_col, random_state=random_state
+        )
 
     for col in dict.fromkeys(feature_cols + interaction_features):
         df[col] = _normalize_variable(df[col])
