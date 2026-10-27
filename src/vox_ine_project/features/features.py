@@ -407,6 +407,7 @@ def fit_ideology_logit_model(
     ideology_cols: list[str],
     feature_cols: list[str] = LIST_LOGIT_FEATURES,
     interaction_features: list[str] = LIST_LOGIT_INTERACTION_FEATURES,
+    base_category: str = "PSOE",
     weight_col: str | None = "population_share",
     random_state: int = 0,
 ):
@@ -425,6 +426,10 @@ def fit_ideology_logit_model(
         Feature columns multiplied together into a single interaction term
         added to the model, by default LIST_LOGIT_INTERACTION_FEATURES. Pass
         an empty list to disable the interaction term.
+    base_category : str, optional
+        Ideology used as the base/reference category (the one statsmodels'
+        MNLogit drops), by default "PSOE". Falls back to alphabetical
+        ordering if not found among the dominant ideologies.
     weight_col : str or None, optional
         Column used to resample rows with replacement (same sample size),
         approximating population-weighted fitting since statsmodels' MNLogit
@@ -459,7 +464,16 @@ def fit_ideology_logit_model(
         df[col] = _normalize_variable(df[col])
 
     dominant_ideology = df[ideology_cols].idxmax(axis=1)
-    y_cat = pd.Categorical(dominant_ideology)
+    categories = sorted(dominant_ideology.unique())
+    if base_category in categories:
+        categories.remove(base_category)
+        categories.append(base_category)
+    else:
+        logger.warning(
+            f"base_category {base_category!r} not found among dominant ideologies, "
+            "defaulting to alphabetical ordering"
+        )
+    y_cat = pd.Categorical(dominant_ideology, categories=categories)
     y = pd.Series(y_cat.codes, index=df.index)
 
     model_feature_cols = list(feature_cols)
