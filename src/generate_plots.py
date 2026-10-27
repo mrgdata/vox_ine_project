@@ -314,17 +314,22 @@ class GeneratePlots:
             index="const", errors="ignore"
         )
 
+        # solid color per ideology, sampled from its DICT_HEATMAP colormap
+        category_colors = {
+            category: plt.get_cmap(DICT_HEATMAP[category][0])(0.65)
+            for category in params.columns
+        }
+
         _, ax = plt.subplots(figsize=(8, 6))
-        params.plot(kind="bar", ax=ax)
+        params.plot(kind="bar", ax=ax, color=[category_colors[c] for c in params.columns])
         ax.axhline(0, color="black", linewidth=0.8)
         ax.set_xlabel(text["xlabel"])
         ax.set_ylabel(text["ylabel"])
         ax.set_title(text["title"].format(base_category=base_category))
 
-        # build solid-color legend swatches before dimming non-significant bars
         legend_handles = [
-            Patch(facecolor=container.patches[0].get_facecolor(), label=category)
-            for container, category in zip(ax.containers, params.columns)
+            Patch(facecolor=category_colors[category], label=category)
+            for category in params.columns
         ]
 
         significance_level = 0.05
