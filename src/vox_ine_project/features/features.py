@@ -473,7 +473,7 @@ def create_agg_data_heatmap_plot(
     return agg.astype("float64"), v_min, v_max
 
 
-def compute_vif(df: pd.DataFrame, feature_cols: list[str]) -> pd.Series:
+def _compute_vif(df: pd.DataFrame, feature_cols: list[str]) -> pd.Series:
     """Compute the Variance Inflation Factor for a set of numeric predictors.
 
     Parameters
@@ -541,7 +541,7 @@ def fit_ideology_linear_model(
     for col in dict.fromkeys(feature_cols + interaction_features):
         df[col] = _normalize_variable(df[col])
 
-    vif = compute_vif(df, feature_cols)
+    vif = _compute_vif(df, feature_cols)
     logger.info(f"VIF for model features:\n{vif}")
     print(vif)
 
@@ -608,7 +608,7 @@ def fit_single_wls(
         for col in x_cols:
             df[col] = _normalize_variable(df[col])
 
-    vif = compute_vif(df, x_cols)
+    vif = _compute_vif(df, x_cols)
     print(vif)
 
     x = sm.add_constant(df[x_cols])
