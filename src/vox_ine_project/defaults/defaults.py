@@ -74,9 +74,9 @@ DICT_HEATMAP = {
         },
     ],
     "PSOE": ["Reds", {"en": "Socialist Party", "es": "Partido Socialista"}],
-    "SUMAR": ["Oranges", {"en": "SUMAR", "es": "SUMAR"}],
+    "SUMAR": ["Purples", {"en": "SUMAR", "es": "SUMAR"}],
     "VOX": ["Greens", {"en": "VOX", "es": "VOX"}],
-    "Other": ["Purples", {"en": "Non-aligned parties", "es": "Partidos no alineados"}],
+    "Other": ["Greys", {"en": "Non-aligned parties", "es": "Partidos no alineados"}],
     "population_share": ["PuBuGn", {"en": "population", "es": "población"}],
 }
 

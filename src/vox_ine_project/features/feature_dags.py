@@ -33,7 +33,7 @@ def generar_dags_electorales():
     )
 
     # Definición de aristas y supuestos causales
-    dag_am.edge("Renta", "America", label="(-)\nMayor concentración\nen rentas bajas")
+    dag_am.edge("Renta", "America", label="(+)\nMenor concentración\nen rentas bajas")
     dag_am.edge("Renta", "PSOE", label="(-)\nMayor apoyo al PSOE\nen rentas bajas")
     dag_am.edge("America", "PSOE", label="(+)\nEfecto directo\npositivo")
 
@@ -71,7 +71,7 @@ def generar_dags_electorales():
     dag_af.edge("Africa", "PSOE", label="(-)\nEfecto directo\nnegativo")
 
     # Guardar y renderizar DAG 2
-    dag_am.render(DIR_PLOTS + "dag_africa_psoe.png", view=False)
+    dag_af.render(DIR_PLOTS + "dag_africa_psoe.png", view=False)
     print("DAG de África generado exitosamente como 'dag_africa_psoe.png'.")
 
 
