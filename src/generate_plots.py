@@ -248,7 +248,7 @@ class GeneratePlots:
         """Plot and save one heatmap per demographic variable x ideology variable.
 
         One heatmap is generated for every combination of demographic variable
-        in `LIST_HEATMAP_DEMO_VARS` (e.g. "pct_ext", "pct_america", "pct_africa")
+        in `LIST_HEATMAP_DEMO_VARS` (e.g. "pct_ext", "pct_america_of_ext", "pct_africa_of_ext")
         and ideology/population variable in `DICT_HEATMAP`, binning household
         income against the demographic variable.
 
@@ -469,7 +469,7 @@ class GeneratePlots:
         )
         ax.axhline(0, color="black", linewidth=0.8)
         ax.set_xlabel(text["xlabel"])
-        ax.tick_params("x", rotation=45)
+        ax.tick_params("x", rotation=60)
         ax.set_ylabel(text["ylabel"])
         ax.set_title(
             text["title"] + (f" ({suffix.replace('_', ' ')})" if suffix else "")

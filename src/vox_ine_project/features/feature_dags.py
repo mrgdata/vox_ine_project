@@ -9,56 +9,23 @@ os.environ["PATH"] += os.pathsep + r"C:\Program Files\Graphviz\bin"
 
 def generar_dags_electorales():
     # --- DAG 1: Inmigración de América ---
-    dag_am = graphviz.Digraph(comment="DAG Inmigración América y PSOE", format="png")
-    dag_am.attr(rankdir="LR", size="10,6")
+    dag_soe = graphviz.Digraph(comment="DAG Inmigración América y PSOE", format="png")
+    dag_soe.attr(rankdir="LR", size="10,6")
 
     # Definición de nodos
-    dag_am.node(
+    dag_soe.node(
         "Renta",
-        "Renta Neta Media del Hogar\n(Variable de Control)",
+        "Renta neta media de los hogares\n(Variable de Control)",
         style="filled",
         fillcolor="#e0f2fe",
     )
-    dag_am.node(
-        "America",
-        "Inmigración América\n(pct_america)",
-        style="filled",
-        fillcolor="#d1fae5",
-    )
-    dag_am.node(
-        "PSOE",
-        "Intención de Voto al PSOE\n(Variable Objetivo)",
-        style="filled",
-        fillcolor="#fee2e2",
-    )
-
-    # Definición de aristas y supuestos causales
-    dag_am.edge("Renta", "America", label="(+)\nMenor concentración\nen rentas bajas")
-    dag_am.edge("Renta", "PSOE", label="(-)\nMayor apoyo al PSOE\nen rentas bajas")
-    dag_am.edge("America", "PSOE", label="(+)\nEfecto directo\npositivo")
-
-    # Guardar y renderizar DAG 1
-    dag_am.render(DIR_PLOTS + "dag_america_psoe.png", view=False)
-    print("DAG de América generado exitosamente como 'dag_america_psoe.png'.")
-
-    # --- DAG 2: Inmigración de África ---
-    dag_af = graphviz.Digraph(comment="DAG Inmigración África y PSOE", format="png")
-    dag_af.attr(rankdir="LR", size="10,6")
-
-    # Definición de nodos
-    dag_af.node(
-        "Renta",
-        "Renta Neta Media del Hogar\n(Variable de Control)",
-        style="filled",
-        fillcolor="#e0f2fe",
-    )
-    dag_af.node(
-        "Africa",
-        "Inmigración África\n(pct_africa)",
+    dag_soe.node(
+        "Inmigr",
+        "Inmigración\n(pct_ext)",
         style="filled",
         fillcolor="#fef3c7",
     )
-    dag_af.node(
+    dag_soe.node(
         "PSOE",
         "Intención de Voto al PSOE\n(Variable Objetivo)",
         style="filled",
@@ -66,13 +33,46 @@ def generar_dags_electorales():
     )
 
     # Definición de aristas y supuestos causales
-    dag_af.edge("Renta", "Africa", label="(-)\nMayor concentración\nen rentas bajas")
-    dag_af.edge("Renta", "PSOE", label="(-)\nMayor apoyo al PSOE\nen rentas bajas")
-    dag_af.edge("Africa", "PSOE", label="(-)\nEfecto directo\nnegativo")
+    dag_soe.edge("Renta", "Inmigr", label="(+)\nMenor concentración\nen rentas bajas")
+    dag_soe.edge("Renta", "PSOE", label="(-)\nMayor apoyo al PSOE\nen rentas bajas")
+    dag_soe.edge("Inmigr", "PSOE", label="(+)\nEfecto directo\npositivo")
+
+    # Guardar y renderizar DAG 1
+    dag_soe.render(DIR_PLOTS + "dag_soe.png", view=False)
+    print("DAG de PSOE generado exitosamente como 'dag_soe.png'.")
+
+    # --- DAG 2: Inmigración de África ---
+    dag_vox = graphviz.Digraph(comment="DAG Inmigración África y PSOE", format="png")
+    dag_vox.attr(rankdir="LR", size="10,6")
+
+    # Definición de nodos
+    dag_vox.node(
+        "Renta",
+        "Renta neta media de los hogares\n(Variable de Control)",
+        style="filled",
+        fillcolor="#e0f2fe",
+    )
+    dag_vox.node(
+        "Inmigr",
+        "Inmigración\n(pct_ext)",
+        style="filled",
+        fillcolor="#fef3c7",
+    )
+    dag_vox.node(
+        "VOX",
+        "Intención de Voto al PSOE\n(Variable Objetivo)",
+        style="filled",
+        fillcolor="#e4fee2",
+    )
+
+    # Definición de aristas y supuestos causales
+    dag_vox.edge("Renta", "Inmigr", label="(-)\nMayor concentración\nen rentas bajas")
+    dag_vox.edge("Renta", "VOX", label="(=)\nIgual apoyo a VOX\nen rentas bajas")
+    dag_vox.edge("Inmigr", "VOX", label="(?)\nEfecto directo\ndesconocido")
 
     # Guardar y renderizar DAG 2
-    dag_af.render(DIR_PLOTS + "dag_africa_psoe.png", view=False)
-    print("DAG de África generado exitosamente como 'dag_africa_psoe.png'.")
+    dag_vox.render(DIR_PLOTS + "dag_vox.png", view=False)
+    print("DAG de VOX generado exitosamente como 'dag_vox.png'.")
 
 
 if __name__ == "__main__":

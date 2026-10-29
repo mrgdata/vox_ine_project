@@ -162,16 +162,16 @@ DICT_IDEOLOGY_COEF_LABELS = {
 }
 
 # demographic variables plotted against income in the heatmaps, with display labels
-LIST_HEATMAP_DEMO_VARS = ["pct_ext", "pct_america", "pct_africa"]
+LIST_HEATMAP_DEMO_VARS = ["pct_ext", "pct_america_of_ext", "pct_africa_of_ext"]
 DICT_DEMO_VAR_LABELS = {
     "pct_ext": {"en": "Immigrant Population", "es": "Población Inmigrante"},
-    "pct_america": {
-        "en": "Population born in America",
-        "es": "Población nacida en América",
+    "pct_america_of_ext": {
+        "en": "Population born in America / Immigrant population",
+        "es": "Población nacida en América / Total extranjeros",
     },
-    "pct_africa": {
-        "en": "Population born in Africa",
-        "es": "Población nacida en África",
+    "pct_africa_of_ext": {
+        "en": "Population born in Africa / Immigrant population",
+        "es": "Población nacida en África / Total extranjeros",
     },
 }
 
