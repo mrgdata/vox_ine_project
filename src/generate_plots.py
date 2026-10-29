@@ -23,6 +23,8 @@ from vox_ine_project.defaults.defaults import (
     FILE_4,
     FILE_5,
     LIST_HEATMAP_DEMO_VARS,
+    LIST_LOGIT_FEATURES,
+    LIST_LOGIT_INTERACTION_FEATURES,
     SEPARATOR,
     VAR_CAT_BOOL,
     VAR_ELECTORAL_YEAR_CHOSEN,
@@ -275,9 +277,10 @@ class GeneratePlots:
         """Fit a weighted linear regression of each ideology's vote share and plot it.
 
         One regression is fit per ideology, predicting its vote share from
-        "pct_ext", "pct_america", "pct_africa" and "renta_neta_media_hogar",
-        weighted by "population_share". The fitted summaries are logged and
-        the resulting coefficients for every ideology are plotted together.
+        `LIST_LOGIT_FEATURES`, weighted by "population_share". If
+        "renta_neta_media_hogar" is one of those features, the models and
+        plots are additionally produced without it, to check its role as a
+        confounder between immigration and vote share.
 
         Parameters
         ----------
@@ -300,11 +303,86 @@ class GeneratePlots:
             if var != "population_share" and var in self.df_heatmap.columns
         ]
 
+        if "renta_neta_media_hogar" in LIST_LOGIT_FEATURES:
+            logger.info(
+                "'renta_neta_media_hogar' is a model feature; fitting models with "
+                "and without it to check its role as a confounder between "
+                "immigration and vote share"
+            )
+            features_without_income = [
+                f for f in LIST_LOGIT_FEATURES if f != "renta_neta_media_hogar"
+            ]
+            interaction_without_income = [
+                f
+                for f in LIST_LOGIT_INTERACTION_FEATURES
+                if f != "renta_neta_media_hogar"
+            ]
+            if len(interaction_without_income) < 2:
+                interaction_without_income = []
+
+            self._fit_and_plot_ideology_model(
+                ideology_cols,
+                LIST_LOGIT_FEATURES,
+                LIST_LOGIT_INTERACTION_FEATURES,
+                "with_income",
+                show,
+                text,
+            )
+            self._fit_and_plot_ideology_model(
+                ideology_cols,
+                features_without_income,
+                interaction_without_income,
+                "without_income",
+                show,
+                text,
+            )
+        else:
+            self._fit_and_plot_ideology_model(
+                ideology_cols,
+                LIST_LOGIT_FEATURES,
+                LIST_LOGIT_INTERACTION_FEATURES,
+                None,
+                show,
+                text,
+            )
+
+    def _fit_and_plot_ideology_model(
+        self,
+        ideology_cols: list[str],
+        feature_cols: list[str],
+        interaction_features: list[str],
+        suffix: str | None,
+        show: bool,
+        text: dict,
+    ):
+        """Fit one WLS model per ideology for the given features and plot its coefficients.
+
+        Parameters
+        ----------
+        ideology_cols : list[str]
+            Vote share columns, one per ideology.
+        feature_cols : list[str]
+            Numeric predictors passed to `fit_ideology_linear_model`.
+        interaction_features : list[str]
+            Feature columns multiplied together into an interaction term.
+        suffix : str or None
+            Appended to the plot title and saved filename to distinguish model
+            variants (e.g. "with_income"/"without_income").
+        show : bool
+            If True, display the plot interactively.
+        text : dict
+            Plot label strings for the chosen language.
+        """
         results, ideology_cols = fit_ideology_linear_model(
-            self.df_heatmap, ideology_cols
+            self.df_heatmap,
+            ideology_cols,
+            feature_cols=feature_cols,
+            interaction_features=interaction_features,
         )
         for ideology, result in results.items():
-            logger.info(f"\n{ideology}\n" + str(result.summary()))
+            logger.info(
+                f"\n{ideology} ({suffix or 'default'})\n" + str(result.summary())
+            )
 
         params = pd.DataFrame(
             {ideology: result.params for ideology, result in results.items()}
@@ -326,7 +404,9 @@ class GeneratePlots:
         ax.axhline(0, color="black", linewidth=0.8)
         ax.set_xlabel(text["xlabel"])
         ax.set_ylabel(text["ylabel"])
-        ax.set_title(text["title"])
+        ax.set_title(
+            text["title"] + (f" ({suffix.replace('_', ' ')})" if suffix else "")
+        )
 
         legend_handles = [
             Patch(facecolor=category_colors[ideology], label=ideology)
@@ -346,8 +426,9 @@ class GeneratePlots:
             loc="upper left",
         )
         plt.tight_layout()
+        filename_suffix = f"_{suffix}" if suffix else ""
         plt.savefig(
-            f"{DIR_PLOTS}/ideology_vote_share_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}.png"
+            f"{DIR_PLOTS}/ideology_vote_share_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}{filename_suffix}.png"
         )
 
         if show:

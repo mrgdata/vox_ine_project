@@ -464,6 +464,45 @@ def fit_ideology_linear_model(
     return results, ideology_cols
 
 
+def fit_single_wls(
+    df: pd.DataFrame,
+    y_col: str,
+    x_cols: list[str],
+    weight_col: str | None = "population_share",
+):
+    """Ad hoc helper to fit and print a single WLS/OLS regression.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data containing `y_col`, `x_cols` and `weight_col`.
+    y_col : str
+        Dependent variable column name.
+    x_cols : list[str]
+        Predictor column names.
+    weight_col : str or None, optional
+        Column used as the WLS observation weight, by default
+        "population_share". Pass None for plain OLS.
+
+    Returns
+    -------
+    RegressionResultsWrapper
+        Fitted WLS/OLS result.
+    """
+    required_cols = list(dict.fromkeys(x_cols + [y_col] + ([weight_col] if weight_col else [])))
+    df = df[required_cols].dropna()
+
+    x = sm.add_constant(df[x_cols])
+    y = df[y_col]
+
+    model = sm.WLS(y, x, weights=df[weight_col]) if weight_col else sm.OLS(y, x)
+    result = model.fit()
+
+    print(result.summary())
+
+    return result
+
+
 def _normalize_variable(
     series: pd.Series,
     method: str = "zscore",
