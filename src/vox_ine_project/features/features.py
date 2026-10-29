@@ -359,6 +359,56 @@ def create_agg_data_evolution_plot(
     return agg, overall_delta, default_distribution
 
 
+def create_agg_data_composition_plot(
+    df: pd.DataFrame, default_distribution: str = "ventile"
+):
+    """Aggregate the composition of the foreign born population by income bucket.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Merged INE dataframe containing "Periodo", "Población", "Extranjero",
+        "América", "África" and "renta_neta_media_hogar" columns.
+    default_distribution : str, optional
+        Income distribution to bucket by (key of DICT_DISTRIBUTION_INCOME),
+        by default "ventile".
+
+    Returns
+    -------
+    tuple[pd.DataFrame, str]
+        Share of population born in America, Africa and other regions, plus
+        the aggregated "population_share" per income bucket, and the
+        distribution name actually used.
+    """
+    if default_distribution not in DICT_DISTRIBUTION_INCOME:
+        logger.warning(
+            "chosen distribution is not available, change defaults or 'ventile' will be chosen"
+        )
+        default_distribution = "ventile"
+    default_dist_value = DICT_DISTRIBUTION_INCOME[default_distribution]
+
+    df_23 = df[df["Periodo"] == 2023].copy()
+
+    # remainder of foreign born population not covered by América/África
+    df_23["otros"] = df_23["Extranjero"] - df_23["América"] - df_23["África"]
+
+    df_23[f"income_{default_distribution}"] = pd.qcut(
+        df_23["renta_neta_media_hogar"], q=default_dist_value, labels=False
+    )
+
+    agg = df_23.groupby(f"income_{default_distribution}")[
+        ["América", "África", "otros", "Población", "population_share"]
+    ].sum()
+
+    agg["pct_america"] = 100 * agg["América"] / agg["Población"]
+    agg["pct_africa"] = 100 * agg["África"] / agg["Población"]
+    agg["pct_other"] = 100 * agg["otros"] / agg["Población"]
+
+    agg = agg[["pct_america", "pct_africa", "pct_other", "population_share"]].reset_index()
+
+    return agg, default_distribution
+
+
 def create_agg_data_heatmap_plot(
     df: pd.DataFrame, value: str, demo_var: str = "pct_ext", n_bins: int = 3
 ):
