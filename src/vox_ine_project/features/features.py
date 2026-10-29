@@ -469,6 +469,7 @@ def fit_single_wls(
     y_col: str,
     x_cols: list[str],
     weight_col: str | None = "population_share",
+    normalize: bool = True,
 ):
     """Ad hoc helper to fit and print a single WLS/OLS regression.
 
@@ -483,14 +484,27 @@ def fit_single_wls(
     weight_col : str or None, optional
         Column used as the WLS observation weight, by default
         "population_share". Pass None for plain OLS.
+    normalize : bool, optional
+        Whether to normalize the predictor columns, by default True.
 
     Returns
     -------
     RegressionResultsWrapper
         Fitted WLS/OLS result.
+    
+    Raises
+    ------
+    ValueError
+        If the DataFrame is empty after selecting required columns and dropping NA.
     """
     required_cols = list(dict.fromkeys(x_cols + [y_col] + ([weight_col] if weight_col else [])))
-    df = df[required_cols].dropna()
+    df = df[[col for col in required_cols if col in df.columns]].dropna()
+    if df.empty:
+        raise ValueError("DataFrame is empty after selecting required columns and dropping NA.")
+
+    if normalize:
+        for col in x_cols:
+            df[col] = _normalize_variable(df[col])
 
     x = sm.add_constant(df[x_cols])
     y = df[y_col]
