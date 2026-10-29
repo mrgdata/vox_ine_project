@@ -10,6 +10,8 @@ from matplotlib.patches import Patch
 from vox_ine_project.defaults.defaults import (
     DICT_BIN_NAME_DEFAULT,
     DICT_BIN_NAMES,
+    DICT_COMPOSITION_PLOT_LABELS,
+    DICT_COMPOSITION_REGIONS,
     DICT_CONTINENT,
     DICT_DEMO_VAR_LABELS,
     DICT_EVOLUTION_PLOT_LABELS,
@@ -35,6 +37,7 @@ from vox_ine_project.defaults.defaults import (
 from vox_ine_project.features.features import (
     clean_election_data,
     clean_ine_data,
+    create_agg_data_composition_plot,
     create_agg_data_evolution_plot,
     create_agg_data_heatmap_plot,
     fit_ideology_linear_model,
@@ -68,6 +71,7 @@ class GeneratePlots:
         self._clean_data(cat_bool=cat_bool, pv_bool=pv_bool)
         self._create_plot_data()
         self._evolution_plot(language=language)
+        self._composition_plot(language=language)
         self._heatmap_plot(False, n_bins=n_bins, language=language)
         self._ideology_linear_plot(False, language=language)
         logger.success("Project have been performed completely!")
@@ -134,6 +138,10 @@ class GeneratePlots:
             self.overall_delta_evolution_plot,
             self.dist_value,
         ) = create_agg_data_evolution_plot(self.df_ine)
+        (
+            self.df_agg_composition_plot,
+            self.composition_dist_value,
+        ) = create_agg_data_composition_plot(self.df_ine)
 
     def _evolution_plot(self, show: bool = False, language: str = VAR_LANGUAGE):
         """Plot the change in foreign born population by household income bucket.
@@ -178,6 +186,58 @@ class GeneratePlots:
         plt.title(text["title"].format(dist_value=self.dist_value))
 
         plt.savefig(DIR_PLOTS + "evolution_plot.png")
+        if show:
+            plt.tight_layout()
+            plt.show()
+
+    def _composition_plot(self, show: bool = False, language: str = VAR_LANGUAGE):
+        """Plot the composition of the foreign born population by income bucket.
+
+        One stacked bar is plotted per household income bucket, showing the
+        share of population born in America, Africa and other regions.
+
+        Parameters
+        ----------
+        show : bool, optional
+            If True, display the plot interactively, by default False.
+        language : str, optional
+            Language used for plot labels ("en" or "es"), by default VAR_LANGUAGE.
+        """
+        if language not in DICT_COMPOSITION_PLOT_LABELS:
+            logger.warning(
+                f"Language '{language}' is not supported, defaulting to 'en'"
+            )
+            language = "en"
+        text = DICT_COMPOSITION_PLOT_LABELS[language]
+
+        logger.info("Creating and saving composition plot...")
+        plt.figure(figsize=(9, 5))
+
+        x = self.df_agg_composition_plot[f"income_{self.composition_dist_value}"]
+        bottom = np.zeros(len(self.df_agg_composition_plot))
+
+        # intensity per bucket scaled by its population_share, hue per region
+        pop_share = self.df_agg_composition_plot["population_share"]
+        norm = Normalize(vmin=pop_share.min(), vmax=pop_share.max())
+
+        legend_handles = []
+        for region, (cmap_name, region_labels) in DICT_COMPOSITION_REGIONS.items():
+            values = self.df_agg_composition_plot[region]
+            cmap = plt.get_cmap(cmap_name)
+
+            plt.bar(x, values, bottom=bottom, color=cmap(norm(pop_share)))
+            bottom += values.to_numpy()
+
+            legend_handles.append(
+                Patch(facecolor=cmap(0.65), label=region_labels[language])
+            )
+
+        plt.xlabel(text["xlabel"].format(dist_value=self.composition_dist_value))
+        plt.ylabel(text["ylabel"])
+        plt.title(text["title"].format(dist_value=self.composition_dist_value))
+        plt.legend(handles=legend_handles, title=text["legend_title"])
+
+        plt.savefig(DIR_PLOTS + "composition_plot.png")
         if show:
             plt.tight_layout()
             plt.show()

@@ -123,6 +123,29 @@ DICT_EVOLUTION_PLOT_LABELS = {
     },
 }
 
+DICT_COMPOSITION_PLOT_LABELS = {
+    "en": {
+        "xlabel": "Household net income {dist_value} (2023-based)",
+        "ylabel": "Share of population (%)",
+        "title": "Composition of the foreign born population by household income {dist_value} of census sections",
+        "legend_title": "Region of birth",
+    },
+    "es": {
+        "xlabel": "Renta neta media del hogar ({dist_value}s, base 2023)",
+        "ylabel": "Porcentaje de población (%)",
+        "title": "Composición de la población nacida en el extranjero por {dist_value}s de renta del hogar de las secciones censales",
+        "legend_title": "Región de nacimiento",
+    },
+}
+
+# regions stacked in the composition plot, with colormap (intensity scaled by
+# population_share) and display label
+DICT_COMPOSITION_REGIONS = {
+    "pct_america": ["Blues", {"en": "America", "es": "América"}],
+    "pct_africa": ["Oranges", {"en": "Africa", "es": "África"}],
+    "pct_other": ["Greys", {"en": "Other regions", "es": "Otras regiones"}],
+}
+
 DICT_IDEOLOGY_COEF_LABELS = {
     "en": {
         "xlabel": "Predictor",
