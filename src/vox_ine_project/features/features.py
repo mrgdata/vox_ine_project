@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from loguru import logger
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 from vox_ine_project.defaults.defaults import (
     DICT_DISTRIBUTION_INCOME,
@@ -238,6 +239,9 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df4: pd.DataFrame):
         raise ValueError(
             "Disaggregated birth country variables for the analysis are missing, check merging process"
         )
+    # composition of the foreign born population, conditional on being foreign born
+    df["pct_america_of_ext"] = round(100 * (df["América"] / df["Extranjero"]), 2)
+    df["pct_africa_of_ext"] = round(100 * (df["África"] / df["Extranjero"]), 2)
     df["population_share_23"] = 100 * (
         df.loc[df["Periodo"] == 2023, "Población"]
         / df.loc[df["Periodo"] == 2023, "Población"].sum()
@@ -469,6 +473,29 @@ def create_agg_data_heatmap_plot(
     return agg.astype("float64"), v_min, v_max
 
 
+def compute_vif(df: pd.DataFrame, feature_cols: list[str]) -> pd.Series:
+    """Compute the Variance Inflation Factor for a set of numeric predictors.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data containing `feature_cols`, with no missing values.
+    feature_cols : list[str]
+        Numeric predictor columns to check for multicollinearity.
+
+    Returns
+    -------
+    pd.Series
+        VIF value per feature, indexed by `feature_cols`.
+    """
+    x = sm.add_constant(df[feature_cols])
+    return pd.Series(
+        [variance_inflation_factor(x.values, i) for i in range(1, x.shape[1])],
+        index=feature_cols,
+        name="VIF",
+    )
+
+
 def fit_ideology_linear_model(
     df: pd.DataFrame,
     ideology_cols: list[str],
@@ -513,6 +540,10 @@ def fit_ideology_linear_model(
 
     for col in dict.fromkeys(feature_cols + interaction_features):
         df[col] = _normalize_variable(df[col])
+
+    vif = compute_vif(df, feature_cols)
+    logger.info(f"VIF for model features:\n{vif}")
+    print(vif)
 
     model_feature_cols = list(feature_cols)
     if interaction_features:
@@ -576,6 +607,9 @@ def fit_single_wls(
     if normalize:
         for col in x_cols:
             df[col] = _normalize_variable(df[col])
+
+    vif = compute_vif(df, x_cols)
+    print(vif)
 
     x = sm.add_constant(df[x_cols])
     y = df[y_col]

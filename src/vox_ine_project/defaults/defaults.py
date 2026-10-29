@@ -5,14 +5,14 @@ VAR_LANGUAGE = "en"  # "en" or "es"
 
 # predictors used in the multinomial logit model of dominant ideology
 LIST_LOGIT_FEATURES = [
-    # "pct_ext",
-    # "pct_america",
-    "pct_africa",
+    "pct_ext",
+    "pct_america_of_ext",
+    "pct_africa_of_ext",
     "renta_neta_media_hogar",
 ]
 LIST_LOGIT_INTERACTION_FEATURES = [
     "renta_neta_media_hogar",
-    "pct_africa",
+    "pct_ext",
 ]
 
 TUPLE_CAT_PROVINCES = ("08", "17", "25", "43")
