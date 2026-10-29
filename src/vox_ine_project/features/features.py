@@ -298,8 +298,8 @@ def create_agg_data_evolution_plot(
     Returns
     -------
     tuple[pd.DataFrame, float, str]
-        Aggregated migrants by income bucket, the overall delta in migrants
-        and the distribution name actually used.
+        Aggregated migrants and population share by income bucket, the
+        overall delta in migrants and the distribution name actually used.
     """
     if default_distribution not in DICT_DISTRIBUTION_INCOME:
         logger.warning(
@@ -340,7 +340,13 @@ def create_agg_data_evolution_plot(
         .rename("migrants_2021")
     )
 
-    agg = pd.concat([agg_21, agg_23], axis=1).reset_index()
+    agg_population_share = (
+        df_23.groupby(f"income_{default_distribution}")["population_share"]
+        .sum()
+        .rename("population_share")
+    )
+
+    agg = pd.concat([agg_21, agg_23, agg_population_share], axis=1).reset_index()
 
     agg["delta_migrants"] = 100 * (
         (agg["migrants_2023"] - agg["migrants_2021"]) / agg["migrants_2021"]

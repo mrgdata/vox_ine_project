@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from matplotlib import pyplot as plt
+from matplotlib.colors import Normalize
 from matplotlib.patches import Patch
 
 from vox_ine_project.defaults.defaults import (
@@ -154,10 +155,15 @@ class GeneratePlots:
         logger.info("Creating and saving plots...")
         plt.figure(figsize=(9, 5))
 
+        # neutral color, intensity scaled by each bucket's population_share
+        pop_share = self.df_agg_evolution_plot["population_share"]
+        norm = Normalize(vmin=pop_share.min(), vmax=pop_share.max())
+        bar_colors = plt.get_cmap("Greys")(norm(pop_share))
+
         plt.bar(
             self.df_agg_evolution_plot[f"income_{self.dist_value}"],
             self.df_agg_evolution_plot["delta_migrants"],
-            color="gray",
+            color=bar_colors,
         )
         plt.axhline(
             self.overall_delta_evolution_plot,
