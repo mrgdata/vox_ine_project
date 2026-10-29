@@ -5,14 +5,14 @@ VAR_LANGUAGE = "en"  # "en" or "es"
 
 # predictors used in the multinomial logit model of dominant ideology
 LIST_LOGIT_FEATURES = [
-    "pct_ext",
-    "pct_america",
+    # "pct_ext",
+    # "pct_america",
     "pct_africa",
     "renta_neta_media_hogar",
 ]
 LIST_LOGIT_INTERACTION_FEATURES = [
     "renta_neta_media_hogar",
-    "pct_ext",
+    "pct_africa",
 ]
 
 TUPLE_CAT_PROVINCES = ("08", "17", "25", "43")
@@ -77,7 +77,7 @@ DICT_HEATMAP = {
     "SUMAR": ["Purples", {"en": "SUMAR", "es": "SUMAR"}],
     "VOX": ["Greens", {"en": "VOX", "es": "VOX"}],
     "Other": ["Greys", {"en": "Non-aligned parties", "es": "Partidos no alineados"}],
-    "population_share": ["PuBuGn", {"en": "population", "es": "población"}],
+    "population_share_23": ["PuBuGn", {"en": "population", "es": "población"}],
 }
 
 # bin name per n_bins, used to label heatmap axes (e.g. Quartile, Decile...)
@@ -118,7 +118,7 @@ DICT_EVOLUTION_PLOT_LABELS = {
     "es": {
         "xlabel": "Renta neta media del hogar ({dist_value}s, base 2023)",
         "ylabel": "Δ población nacida en el extranjero (2023 − 2021)",
-        "title": "Cambio en la población nacida en el extranjero por {dist_value}s de renta del hogar de las secciones censales",
+        "title": "Cambio en la población nacida en el extranjero\n por {dist_value}s de renta del hogar de las secciones censales",
         "legend_label": "Δ global de población nacida en el extranjero",
     },
 }
@@ -127,19 +127,19 @@ DICT_COMPOSITION_PLOT_LABELS = {
     "en": {
         "xlabel": "Household net income {dist_value} (2023-based)",
         "ylabel": "Share of population (%)",
-        "title": "Composition of the foreign born population by household income {dist_value} of census sections",
+        "title": "Composition of the foreign born population\n by household income {dist_value} of census sections",
         "legend_title": "Region of birth",
     },
     "es": {
         "xlabel": "Renta neta media del hogar ({dist_value}s, base 2023)",
         "ylabel": "Porcentaje de población (%)",
-        "title": "Composición de la población nacida en el extranjero por {dist_value}s de renta del hogar de las secciones censales",
+        "title": "Composición de la población nacida en el extranjero\n por {dist_value}s de renta del hogar de las secciones censales",
         "legend_title": "Región de nacimiento",
     },
 }
 
 # regions stacked in the composition plot, with colormap (intensity scaled by
-# population_share) and display label
+# population_share_23) and display label
 DICT_COMPOSITION_REGIONS = {
     "pct_america": ["Blues", {"en": "America", "es": "América"}],
     "pct_africa": ["Oranges", {"en": "Africa", "es": "África"}],
@@ -150,13 +150,13 @@ DICT_IDEOLOGY_COEF_LABELS = {
     "en": {
         "xlabel": "Predictor",
         "ylabel": "Coefficient (vote share percentage points)",
-        "title": "Vote share coefficients by ideology (weighted linear regression)",
+        "title": "Vote share coefficients by ideology\n (weighted linear regression)",
         "legend_title": "Ideology",
     },
     "es": {
         "xlabel": "Predictor",
         "ylabel": "Coeficiente (puntos porcentuales de voto)",
-        "title": "Coeficientes de intención de voto por ideología (regresión lineal ponderada)",
+        "title": "Coeficientes de intención de voto x ideología\n (regresión lineal ponderada)",
         "legend_title": "Ideología",
     },
 }

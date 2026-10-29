@@ -163,9 +163,9 @@ class GeneratePlots:
         logger.info("Creating and saving plots...")
         plt.figure(figsize=(9, 5))
 
-        # neutral color, intensity scaled by each bucket's population_share
-        pop_share = self.df_agg_evolution_plot["population_share"]
-        norm = Normalize(vmin=pop_share.min(), vmax=pop_share.max())
+        # neutral color, intensity scaled by each bucket's population_share_23
+        pop_share = self.df_agg_evolution_plot["population_share_23"]
+        norm = Normalize(vmin=pop_share.min() - 1, vmax=pop_share.max() + 1)
         bar_colors = plt.get_cmap("Greys")(norm(pop_share))
 
         plt.bar(
@@ -216,9 +216,9 @@ class GeneratePlots:
         x = self.df_agg_composition_plot[f"income_{self.composition_dist_value}"]
         bottom = np.zeros(len(self.df_agg_composition_plot))
 
-        # intensity per bucket scaled by its population_share, hue per region
-        pop_share = self.df_agg_composition_plot["population_share"]
-        norm = Normalize(vmin=pop_share.min(), vmax=pop_share.max())
+        # intensity per bucket scaled by its population_share_23, hue per region
+        pop_share = self.df_agg_composition_plot["population_share_23"]
+        norm = Normalize(vmin=pop_share.min() - 1, vmax=pop_share.max() + 1)
 
         legend_handles = []
         for region, (cmap_name, region_labels) in DICT_COMPOSITION_REGIONS.items():
@@ -343,7 +343,7 @@ class GeneratePlots:
         """Fit a weighted linear regression of each ideology's vote share and plot it.
 
         One regression is fit per ideology, predicting its vote share from
-        `LIST_LOGIT_FEATURES`, weighted by "population_share". If
+        `LIST_LOGIT_FEATURES`, weighted by "population_share_23". If
         "renta_neta_media_hogar" is one of those features, the models and
         plots are additionally produced without it, to check its role as a
         confounder between immigration and vote share.
@@ -366,7 +366,7 @@ class GeneratePlots:
         ideology_cols = [
             var
             for var in DICT_HEATMAP
-            if var != "population_share" and var in self.df_heatmap.columns
+            if var != "population_share_23" and var in self.df_heatmap.columns
         ]
 
         if "renta_neta_media_hogar" in LIST_LOGIT_FEATURES:
@@ -390,7 +390,7 @@ class GeneratePlots:
                 ideology_cols,
                 LIST_LOGIT_FEATURES,
                 LIST_LOGIT_INTERACTION_FEATURES,
-                "with_income",
+                "with_income" if language == "en" else ("renta incl."),
                 show,
                 text,
             )
@@ -398,7 +398,7 @@ class GeneratePlots:
                 ideology_cols,
                 features_without_income,
                 interaction_without_income,
-                "without_income",
+                "without_income" if language == "en" else ("renta excl."),
                 show,
                 text,
             )
@@ -469,6 +469,7 @@ class GeneratePlots:
         )
         ax.axhline(0, color="black", linewidth=0.8)
         ax.set_xlabel(text["xlabel"])
+        ax.tick_params("x", rotation=45)
         ax.set_ylabel(text["ylabel"])
         ax.set_title(
             text["title"] + (f" ({suffix.replace('_', ' ')})" if suffix else "")

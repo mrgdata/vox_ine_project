@@ -146,7 +146,7 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df4: pd.DataFrame):
     -------
     pd.DataFrame
         Merged dataframe with "renta_neta_media_hogar", "pct_ext", "pct_america",
-        "pct_africa" and "population_share" columns, one row per section/period.
+        "pct_africa" and "population_share_23" columns, one row per section/period.
 
     Raises
     ------
@@ -238,7 +238,14 @@ def merge_ine_data(df1: pd.DataFrame, df2: pd.DataFrame, df4: pd.DataFrame):
         raise ValueError(
             "Disaggregated birth country variables for the analysis are missing, check merging process"
         )
-    df["population_share"] = 100 * (df["Población"] / df["Población"].sum())
+    df["population_share_23"] = 100 * (
+        df.loc[df["Periodo"] == 2023, "Población"]
+        / df.loc[df["Periodo"] == 2023, "Población"].sum()
+    )
+    df["population_share_21"] = 100 * (
+        df.loc[df["Periodo"] == 2021, "Población"]
+        / df.loc[df["Periodo"] == 2021, "Población"].sum()
+    )
 
     return df
 
@@ -263,6 +270,8 @@ def impute_missing_data(df: pd.DataFrame):
 
         df_year = df_year[df_year["Población"].notna()]
         for col in df_year.columns:
+            if "population_share" in col:
+                continue
             if df_year[col].isna().sum() > 0:
                 df_year[col] = df_year[col].astype("Float64")
                 municipios_average = df_year.groupby("Municipios")[col].transform(
@@ -340,13 +349,13 @@ def create_agg_data_evolution_plot(
         .rename("migrants_2021")
     )
 
-    agg_population_share = (
-        df_23.groupby(f"income_{default_distribution}")["population_share"]
+    agg_population_share_23 = (
+        df_23.groupby(f"income_{default_distribution}")["population_share_23"]
         .sum()
-        .rename("population_share")
+        .rename("population_share_23")
     )
 
-    agg = pd.concat([agg_21, agg_23, agg_population_share], axis=1).reset_index()
+    agg = pd.concat([agg_21, agg_23, agg_population_share_23], axis=1).reset_index()
 
     agg["delta_migrants"] = 100 * (
         (agg["migrants_2023"] - agg["migrants_2021"]) / agg["migrants_2021"]
@@ -377,7 +386,7 @@ def create_agg_data_composition_plot(
     -------
     tuple[pd.DataFrame, str]
         Share of population born in America, Africa and other regions, plus
-        the aggregated "population_share" per income bucket, and the
+        the aggregated "population_share_23" per income bucket, and the
         distribution name actually used.
     """
     if default_distribution not in DICT_DISTRIBUTION_INCOME:
@@ -397,14 +406,16 @@ def create_agg_data_composition_plot(
     )
 
     agg = df_23.groupby(f"income_{default_distribution}")[
-        ["América", "África", "otros", "Población", "population_share"]
+        ["América", "África", "otros", "Población", "population_share_23"]
     ].sum()
 
     agg["pct_america"] = 100 * agg["América"] / agg["Población"]
     agg["pct_africa"] = 100 * agg["África"] / agg["Población"]
     agg["pct_other"] = 100 * agg["otros"] / agg["Población"]
 
-    agg = agg[["pct_america", "pct_africa", "pct_other", "population_share"]].reset_index()
+    agg = agg[
+        ["pct_america", "pct_africa", "pct_other", "population_share_23"]
+    ].reset_index()
 
     return agg, default_distribution
 
@@ -419,7 +430,7 @@ def create_agg_data_heatmap_plot(
     df : pd.DataFrame
         Dataframe containing "renta_neta_media_hogar", `demo_var` and `value`.
     value : str
-        Column to aggregate; summed if "population_share", otherwise averaged
+        Column to aggregate; summed if "population_share_23", otherwise averaged
         weighted by "Población".
     demo_var : str, optional
         Demographic variable to bin on the second axis, by default "pct_ext".
@@ -442,7 +453,7 @@ def create_agg_data_heatmap_plot(
     df["bin_b"] = pd.qcut(df[demo_var], q=n_bins, labels=False, duplicates="drop")
 
     # Aggregate
-    if value == "population_share":
+    if value == "population_share_23":
         agg = df.groupby(["bin_a", "bin_b"])[value].sum().unstack()
         v_min, v_max = agg.min().min(), agg.max().max()
 
@@ -463,7 +474,7 @@ def fit_ideology_linear_model(
     ideology_cols: list[str],
     feature_cols: list[str] = LIST_LOGIT_FEATURES,
     interaction_features: list[str] = LIST_LOGIT_INTERACTION_FEATURES,
-    weight_col: str | None = "population_share",
+    weight_col: str | None = "population_share_23",
 ):
     """Fit one weighted linear regression per ideology, predicting vote share.
 
@@ -483,7 +494,7 @@ def fit_ideology_linear_model(
         an empty list to disable the interaction term.
     weight_col : str or None, optional
         Column used as the WLS observation weight, so more populous sections
-        count more, by default "population_share". Pass None for plain OLS.
+        count more, by default "population_share_23". Pass None for plain OLS.
 
     Returns
     -------
@@ -524,7 +535,7 @@ def fit_single_wls(
     df: pd.DataFrame,
     y_col: str,
     x_cols: list[str],
-    weight_col: str | None = "population_share",
+    weight_col: str | None = "population_share_23",
     normalize: bool = True,
 ):
     """Ad hoc helper to fit and print a single WLS/OLS regression.
@@ -539,7 +550,7 @@ def fit_single_wls(
         Predictor column names.
     weight_col : str or None, optional
         Column used as the WLS observation weight, by default
-        "population_share". Pass None for plain OLS.
+        "population_share_23". Pass None for plain OLS.
     normalize : bool, optional
         Whether to normalize the predictor columns, by default True.
 
@@ -547,16 +558,20 @@ def fit_single_wls(
     -------
     RegressionResultsWrapper
         Fitted WLS/OLS result.
-    
+
     Raises
     ------
     ValueError
         If the DataFrame is empty after selecting required columns and dropping NA.
     """
-    required_cols = list(dict.fromkeys(x_cols + [y_col] + ([weight_col] if weight_col else [])))
+    required_cols = list(
+        dict.fromkeys(x_cols + [y_col] + ([weight_col] if weight_col else []))
+    )
     df = df[[col for col in required_cols if col in df.columns]].dropna()
     if df.empty:
-        raise ValueError("DataFrame is empty after selecting required columns and dropping NA.")
+        raise ValueError(
+            "DataFrame is empty after selecting required columns and dropping NA."
+        )
 
     if normalize:
         for col in x_cols:
