@@ -13,6 +13,7 @@ from vox_ine_project.defaults.defaults import (
     TUPLE_CAT_PROVINCES,
     TUPLE_PV_PROVINCES,
     VAR_CAT_BOOL,
+    VAR_POPULATION_SHARE_COL,
     VAR_PV_BOOL,
 )
 
@@ -501,7 +502,7 @@ def fit_ideology_linear_model(
     ideology_cols: list[str],
     feature_cols: list[str] = LIST_LOGIT_FEATURES,
     interaction_features: list[str] = LIST_LOGIT_INTERACTION_FEATURES,
-    weight_col: str | None = "population_share_23",
+    weight_col: str | None = VAR_POPULATION_SHARE_COL,
 ):
     """Fit one weighted linear regression per ideology, predicting vote share.
 
@@ -521,7 +522,8 @@ def fit_ideology_linear_model(
         an empty list to disable the interaction term.
     weight_col : str or None, optional
         Column used as the WLS observation weight, so more populous sections
-        count more, by default "population_share_23". Pass None for plain OLS.
+        count more, by default VAR_POPULATION_SHARE_COL (the population share
+        matching the chosen electoral year). Pass None for plain OLS.
 
     Returns
     -------
@@ -566,7 +568,7 @@ def fit_single_wls(
     df: pd.DataFrame,
     y_col: str,
     x_cols: list[str],
-    weight_col: str | None = "population_share_23",
+    weight_col: str | None = VAR_POPULATION_SHARE_COL,
     normalize: bool = True,
 ):
     """Ad hoc helper to fit and print a single WLS/OLS regression.
@@ -581,7 +583,8 @@ def fit_single_wls(
         Predictor column names.
     weight_col : str or None, optional
         Column used as the WLS observation weight, by default
-        "population_share_23". Pass None for plain OLS.
+        VAR_POPULATION_SHARE_COL (the population share matching the chosen
+        electoral year). Pass None for plain OLS.
     normalize : bool, optional
         Whether to normalize the predictor columns, by default True.
 

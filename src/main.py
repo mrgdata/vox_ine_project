@@ -51,6 +51,9 @@ def apply_overrides(args: argparse.Namespace) -> None:
     defaults.VAR_ELECTORAL_YEAR_CHOSEN = args.year
     defaults.VAR_PARTY_IDEOLOGY_SCHEME_23 = args.party_scheme
     defaults.FILE_5 = "congreso19" if args.year == 2019 else "congreso23"
+    defaults.VAR_POPULATION_SHARE_COL = (
+        "population_share_21" if args.year == 2019 else "population_share_23"
+    )
     defaults.DICT_PARTY_IDEOLOGY_23 = (
         defaults.DICT_PARTY_IDEOLOGY_23_MAIN_PARTIES
         if args.party_scheme == "main_parties"

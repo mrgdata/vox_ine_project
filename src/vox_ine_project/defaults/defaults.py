@@ -3,6 +3,12 @@ VAR_PV_BOOL = False
 VAR_ELECTORAL_YEAR_CHOSEN = 2023
 VAR_LANGUAGE = "en"  # "en" or "es"
 
+# population_share column matching the INE census Periodo closest to the
+# chosen electoral year, used as the default WLS weight
+VAR_POPULATION_SHARE_COL = (
+    "population_share_21" if VAR_ELECTORAL_YEAR_CHOSEN == 2019 else "population_share_23"
+)
+
 # predictors used in the multinomial logit model of dominant ideology
 LIST_LOGIT_FEATURES = [
     "pct_ext",
