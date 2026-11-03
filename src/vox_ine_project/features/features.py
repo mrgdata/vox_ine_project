@@ -295,6 +295,49 @@ def impute_missing_data(df: pd.DataFrame):
     return df
 
 
+def filter_rural_urban(
+    df: pd.DataFrame, area_type: str = "national", urban_threshold: int = 10000
+):
+    """Filter a sections dataframe to keep only rural or urban municipios.
+
+    A "Municipios" is classified as urban if its total "Población" (summed
+    across all its sections, within the same "Periodo" if present) exceeds
+    `urban_threshold`, rural otherwise.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe containing "Municipios" and "Población" columns.
+    area_type : str, optional
+        "national" (no filter), "urban" or "rural", by default "national".
+    urban_threshold : int, optional
+        Municipio population threshold (inhabitants), by default 10000.
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered dataframe.
+
+    Raises
+    ------
+    ValueError
+        If `area_type` is not one of "national", "rural" or "urban".
+    """
+    if area_type == "national":
+        return df
+    if area_type not in ("rural", "urban"):
+        raise ValueError(
+            f"Unknown area_type: {area_type!r}. Use 'national', 'rural' or 'urban'."
+        )
+
+    group_cols = ["Municipios", "Periodo"] if "Periodo" in df.columns else ["Municipios"]
+    municipio_population = df.groupby(group_cols)["Población"].transform("sum")
+
+    if area_type == "urban":
+        return df[municipio_population > urban_threshold]
+    return df[municipio_population <= urban_threshold]
+
+
 def create_agg_data_evolution_plot(
     df: pd.DataFrame, default_distribution: str = "ventile"
 ):

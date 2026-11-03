@@ -2,6 +2,8 @@ VAR_CAT_BOOL = False
 VAR_PV_BOOL = False
 VAR_ELECTORAL_YEAR_CHOSEN = 2023
 VAR_LANGUAGE = "en"  # "en" or "es"
+VAR_AREA_TYPE = "national"  # "national", "rural" or "urban"
+VAR_URBAN_POPULATION_THRESHOLD = 10000  # municipio inhabitants, urban if above
 
 # population_share column matching the INE census Periodo closest to the
 # chosen electoral year, used as the default WLS weight

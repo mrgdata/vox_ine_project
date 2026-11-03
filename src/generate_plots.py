@@ -29,10 +29,12 @@ from vox_ine_project.defaults.defaults import (
     LIST_LOGIT_FEATURES,
     LIST_LOGIT_INTERACTION_FEATURES,
     SEPARATOR,
+    VAR_AREA_TYPE,
     VAR_CAT_BOOL,
     VAR_ELECTORAL_YEAR_CHOSEN,
     VAR_LANGUAGE,
     VAR_PV_BOOL,
+    VAR_URBAN_POPULATION_THRESHOLD,
 )
 from vox_ine_project.features.features import (
     clean_election_data,
@@ -40,6 +42,7 @@ from vox_ine_project.features.features import (
     create_agg_data_composition_plot,
     create_agg_data_evolution_plot,
     create_agg_data_heatmap_plot,
+    filter_rural_urban,
     fit_ideology_linear_model,
     impute_missing_data,
     merge_ine_data,
@@ -53,6 +56,7 @@ class GeneratePlots:
         language: str = VAR_LANGUAGE,
         cat_bool: bool = VAR_CAT_BOOL,
         pv_bool: bool = VAR_PV_BOOL,
+        area_type: str = VAR_AREA_TYPE,
     ):
         """Run the full pipeline: load, clean and merge data, then plot everything.
 
@@ -66,10 +70,15 @@ class GeneratePlots:
             If True, filter out Catalan provinces, by default VAR_CAT_BOOL.
         pv_bool : bool, optional
             If True, filter out Basque Country provinces, by default VAR_PV_BOOL.
+        area_type : str, optional
+            "national", "rural" or "urban" (municipio population above
+            VAR_URBAN_POPULATION_THRESHOLD), by default VAR_AREA_TYPE.
         """
+        self.dir_plots = os.path.join(DIR_PLOTS, area_type)
+        os.makedirs(self.dir_plots, exist_ok=True)
         self._load_data()
         self._clean_data(cat_bool=cat_bool, pv_bool=pv_bool)
-        self._create_plot_data()
+        self._create_plot_data(area_type=area_type)
         self._evolution_plot(language=language)
         self._composition_plot(language=language)
         self._heatmap_plot(False, n_bins=n_bins, language=language)
@@ -123,11 +132,23 @@ class GeneratePlots:
         )
         self.df_elections = clean_election_data(self.df_elections)
 
-    def _create_plot_data(self):
-        """Merge the cleaned dataframes, impute missing values and build plot inputs."""
+    def _create_plot_data(self, area_type: str = VAR_AREA_TYPE):
+        """Merge the cleaned dataframes, impute missing values and build plot inputs.
+
+        Parameters
+        ----------
+        area_type : str, optional
+            "national", "rural" or "urban" municipio filter, by default
+            VAR_AREA_TYPE.
+        """
         logger.info("Merging and creating new data...")
         self.df_ine_raw = merge_ine_data(self.df_1_ine, self.df_2_ine, self.df_4_ine)
         self.df_ine = impute_missing_data(self.df_ine_raw)
+        self.df_ine = filter_rural_urban(
+            self.df_ine,
+            area_type=area_type,
+            urban_threshold=VAR_URBAN_POPULATION_THRESHOLD,
+        )
         self.df_heatmap = self.df_elections.merge(
             self.df_ine[self.df_ine["Periodo"] == VAR_ELECTORAL_YEAR_CHOSEN].copy(),
             on="key_seccion",
@@ -185,7 +206,7 @@ class GeneratePlots:
         plt.ylabel(text["ylabel"])
         plt.title(text["title"].format(dist_value=self.dist_value))
 
-        plt.savefig(DIR_PLOTS + "evolution_plot.png")
+        plt.savefig(os.path.join(self.dir_plots, "evolution_plot.png"))
         if show:
             plt.tight_layout()
             plt.show()
@@ -237,7 +258,7 @@ class GeneratePlots:
         plt.title(text["title"].format(dist_value=self.composition_dist_value))
         plt.legend(handles=legend_handles, title=text["legend_title"])
 
-        plt.savefig(DIR_PLOTS + "composition_plot.png")
+        plt.savefig(os.path.join(self.dir_plots, "composition_plot.png"))
         if show:
             plt.tight_layout()
             plt.show()
@@ -331,7 +352,10 @@ class GeneratePlots:
 
                 plt.tight_layout()
                 plt.savefig(
-                    f"{DIR_PLOTS}/heatmap_{var}_{demo_var}_{n_bins}x{n_bins}_{VAR_ELECTORAL_YEAR_CHOSEN}.png"
+                    os.path.join(
+                        self.dir_plots,
+                        f"heatmap_{var}_{demo_var}_{n_bins}x{n_bins}_{VAR_ELECTORAL_YEAR_CHOSEN}.png",
+                    )
                 )
 
                 if show:
@@ -495,7 +519,10 @@ class GeneratePlots:
         plt.tight_layout()
         filename_suffix = f"_{suffix}" if suffix else ""
         plt.savefig(
-            f"{DIR_PLOTS}/ideology_vote_share_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}{filename_suffix}.png"
+            os.path.join(
+                self.dir_plots,
+                f"ideology_vote_share_coefficients_{VAR_ELECTORAL_YEAR_CHOSEN}{filename_suffix}.png",
+            )
         )
 
         if show:

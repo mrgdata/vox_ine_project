@@ -42,6 +42,13 @@ def parse_args() -> argparse.Namespace:
         default=defaults.VAR_PV_BOOL,
         help="Filter out Basque Country provinces from the analysis",
     )
+    parser.add_argument(
+        "--area-type",
+        choices=["national", "rural", "urban"],
+        default=defaults.VAR_AREA_TYPE,
+        help="Filter census sections by municipio size (rural/urban split at "
+        f"{defaults.VAR_URBAN_POPULATION_THRESHOLD} inhabitants)",
+    )
     return parser.parse_args()
 
 
@@ -78,4 +85,5 @@ if __name__ == "__main__":
         language=args.language,
         cat_bool=args.exclude_catalonia,
         pv_bool=args.exclude_basque_country,
+        area_type=args.area_type,
     )
